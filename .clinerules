@@ -1,0 +1,51 @@
+
+
+## Application Building Context
+
+Read the following files in order before implementing or making any architectural decision:
+
+1. `context/project-overview.md` — product definition, user roles, core user flows, features, and scope
+2. `context/architecture.md` — system structure, boundaries, storage model, and invariants
+3. `context/ui-context.md` — theme, colors, typography, component conventions, screens, and navigation
+4. `context/code-standards.md` — implementation rules and conventions
+5. `context/test-context.md` — test strategy, test scope per feature unit, and definition of done
+6. `context/ai-workflow-rules.md` — development workflow, scoping rules, and delivery approach
+7. `context/progress-tracker.md` — current phase, completed work, open questions, git log, and next steps
+
+## Mandatory Delivery Sequence
+
+Every feature unit must follow this sequence before it is considered complete:
+
+```
+BUILD → TEST → COMMIT
+```
+
+1. **BUILD** — Implement the feature unit as defined in the context files
+2. **TEST** — Run all tests defined for this unit in `context/test-context.md`. Do not proceed if any test fails
+3. **COMMIT** — Log the commit in the Git Log section of `context/progress-tracker.md` using conventional commit format, then commit to GitHub
+
+Do not skip or reorder these steps.
+
+## Critical Invariants — Always Check
+
+Before completing any feature unit, confirm none of these have been violated:
+
+- **Athlete messaging consent gate** — No conversation thread opens without the athlete accepting a message request
+- **Trust badge rules** — Badges are never self-assigned by the athlete; each level requires the correct external actor
+- **Payment tier gating** — All feature gates are enforced server-side; never rely on client-side state alone
+- **Videos never in the database** — File storage URL only; no binary data in the database
+- **Unverified recruiter/club accounts** — Locked out of all paid features until verification is approved
+
+See `context/architecture.md` for the full invariants list.
+
+## Keeping Docs in Sync
+
+Update the relevant context file whenever implementation changes affect:
+
+- System architecture or boundaries → `architecture.md`
+- Storage model decisions → `architecture.md`
+- Code conventions or standards → `code-standards.md`
+- Feature scope → `project-overview.md`
+- UI, screens, or components → `ui-context.md`
+- Test scope or strategy → `test-context.md`
+- Progress, git log, or open questions → `progress-tracker.md`
