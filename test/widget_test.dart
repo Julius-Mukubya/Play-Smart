@@ -1,28 +1,32 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:play_smart/main.dart';
 
 void main() {
-  testWidgets('Play Smart app renders placeholder screen on splash route',
+  testWidgets('Play Smart app renders splash screen on start',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const PlaySmartApp());
+    await tester.pumpWidget(
+      const ProviderScope(child: PlaySmartApp()),
+    );
 
-    // The app starts at the splash route — "Splash" text appears in both
-    // the AppBar title and the body, so use findsWidgets
-    expect(find.text('Splash'), findsWidgets);
+    // The app starts at the splash screen
+    expect(find.text('Play Smart'), findsWidgets);
 
-    // The Go to Discover button should be present
-    expect(find.text('Go to Discover'), findsOneWidget);
+    // Loading indicator should be present
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
-  testWidgets('Play Smart app navigates to discover route',
+  testWidgets('Play Smart app navigates to landing when unauthenticated',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const PlaySmartApp());
+    await tester.pumpWidget(
+      const ProviderScope(child: PlaySmartApp()),
+    );
 
-    // Tap the Go to Discover button
-    await tester.tap(find.text('Go to Discover'));
+    // Wait for the splash screen to check session and navigate
     await tester.pumpAndSettle();
 
-    // Should now be on the Discover Feed placeholder
-    expect(find.text('Discover Feed'), findsWidgets);
+    // Should be redirected to landing since no session exists
+    expect(find.text('Discover. Connect. Play.'), findsOneWidget);
   });
 }

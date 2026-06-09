@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/screens/landing_screen.dart';
+import 'package:play_smart/auth/screens/sign_in_screen.dart';
+import 'package:play_smart/auth/screens/sign_up_screen.dart';
+import 'package:play_smart/auth/screens/splash_screen.dart';
 
 /// Centralised app router with role-based access.
-/// Currently using named routes for simplicity; can be upgraded to GoRouter's
-/// redirect guards for role-based access control.
+/// Auth routes use real screens. Other routes use placeholders until implemented.
 class AppRouter {
   AppRouter._();
 
@@ -28,10 +31,13 @@ class AppRouter {
   static final GoRouter router = GoRouter(
     initialLocation: splash,
     routes: [
-      GoRoute(path: splash, builder: (_, __) => const _PlaceholderScreen(title: 'Splash')),
-      GoRoute(path: landing, builder: (_, __) => const _PlaceholderScreen(title: 'Landing / Home')),
-      GoRoute(path: signUp, builder: (_, __) => const _PlaceholderScreen(title: 'Sign Up')),
-      GoRoute(path: signIn, builder: (_, __) => const _PlaceholderScreen(title: 'Sign In')),
+      // Auth routes — implemented
+      GoRoute(path: splash, builder: (_, __) => const SplashScreen()),
+      GoRoute(path: landing, builder: (_, __) => const LandingScreen()),
+      GoRoute(path: signUp, builder: (_, __) => const SignUpScreen()),
+      GoRoute(path: signIn, builder: (_, __) => const SignInScreen()),
+
+      // Other routes — placeholders
       GoRoute(path: athleteSetup, builder: (_, __) => const _PlaceholderScreen(title: 'Athlete Profile Setup')),
       GoRoute(path: verification, builder: (_, __) => const _PlaceholderScreen(title: 'Verification')),
       GoRoute(path: discover, builder: (_, __) => const _PlaceholderScreen(title: 'Discover Feed')),
