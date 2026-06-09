@@ -12,7 +12,7 @@ Update this file after every meaningful implementation change and after every su
 
 ## Current Goal
 
-**Phase 0: Foundation** — Rename project, scaffold folder structure, define shared domain types, set up theme, router, mock data, and test infrastructure.
+**Phase 2: Profiles** — Athlete profile setup onboarding, public profile view, own profile with edit controls, and recruiter/club verification submission screen.
 
 ---
 
@@ -30,19 +30,43 @@ Update this file after every meaningful implementation change and after every su
 - [x] MockData repository with seed data for all boundaries
 - [x] 2 widget tests passing (render + navigation)
 - [x] Updated context files: architecture.md (stack choices), ui-context.md (color tokens)
-- [x] Committed to git
+- [x] **Committed:** `feat(init): rename project to play_smart and scaffold foundation structure`
 
-### Phase 1 — Auth Boundary
-- [ ] Not started
+### Phase 1 — Auth Boundary (Complete)
+
+- [x] Auth models: AuthState sealed class, SignUpData, SignInData
+- [x] Auth repository: sign up, sign in, sign out, session, age gate, duplicate email detection, password validation
+- [x] Auth service: verification gating, shortlist permission, message permission, post-sign-in routing, under-18 checks
+- [x] Auth provider: Riverpod Notifier with all auth operations
+- [x] Splash screen: session check with auto-redirect to landing or discover
+- [x] Landing screen: public entry with hero, CTAs, trust badge explanation
+- [x] Sign Up screen: role selection (Athlete, Recruiter, Club), DOB picker, validation, error display
+- [x] Sign In screen: email/password login with forgot password link
+- [x] 14 unit tests passing (auth repository + auth service)
+- [x] **Committed:** `feat(auth): implement auth boundary with sign up, sign in, splash, and landing screens`
+
+### Phase 2 — Profiles (In Progress)
+
+- [x] Profile repository: CRUD, completeness calculator, search filtering
+- [x] Profile provider: Riverpod Notifier for loading/updating profiles
+- [x] Athlete profile screen (public view): header, action buttons, bio, stats chips, achievements with badges, content gallery
+- [ ] Wire profile screen into GoRouter
+- [ ] Own profile screen (edit controls + analytics section)
+- [ ] Profile setup onboarding flow (multi-step)
+- [ ] Recruiter/Club verification submission screen
+- [ ] Profile tests
+- [ ] BUILD → TEST → COMMIT
+
+---
 
 ## In Progress
 
-- None yet — Phase 0 complete, awaiting Phase 1.
+- **Phase 2: Profiles** — Profile repository, provider, and public view screen built. Need to wire into router, build own profile + onboarding + verification screens, write tests, and commit.
 
 ## Next Up
 
-1. Implement auth: sign up with role selection, sign in, session management (Phase 1)
-2. Implement athlete onboarding: profile setup flow (Phase 2)
+1. ~~Implement auth: sign up with role selection, sign in, session management (Phase 1)~~ ✅
+2. **Implement athlete onboarding: profile setup flow (Phase 2)** ← YOU ARE HERE
 3. Implement recruiter/club verification submission flow (Phase 2)
 4. Implement athlete profile public view (Phase 2)
 5. Implement content upload (video with compression, photos, posts) (Phase 3)
@@ -59,16 +83,16 @@ Update this file after every meaningful implementation change and after every su
 
 ## Open Questions
 
-1. ~~**Framework choice** — Web (Next.js) + mobile (React Native / Expo)? Or Flutter? Or mobile-only MVP first?~~ **Resolved: Flutter (existing project)**
-2. ~~**Database** — PostgreSQL (Prisma) or another option?~~ **Resolved: Local/mock for now, ready for Firebase/Supabase**
-3. ~~**File storage** — Cloudinary or S3?~~ **Resolved: Local/mock for now, ready for Cloudinary/S3**
-4. ~~**Auth provider** — Clerk, Firebase Auth, or custom JWT?~~ **Resolved: Local/mock for now, ready for Firebase**
-5. ~~**Search** — PostgreSQL full-text or Algolia?~~ **Resolved: In-memory filtering for now, ready for Algolia**
-6. ~~**Color palette** — Exact hex values for all CSS tokens in `ui-context.md` are undecided.~~ **Resolved: Light blue theme — see ui-context.md**
-7. **Under-18 restrictions** — The requirements say "additional safeguards for users under 18" but do not specify exactly what is restricted. Define the exact rules (e.g. no direct messaging from adult recruiters, restricted content types, parental consent) before implementing the auth boundary.
-8. **Pricing** — The requirements give ranges (e.g. Premium Monthly UGX 15,000–25,000). Confirm exact prices before implementing the payments boundary.
-9. **Video compression spec** — What target bitrate or resolution should compressed videos be encoded to? Define before implementing upload.
-10. **Coach-Endorsed badge** — What is the verification requirement for a "verified coach" who can endorse achievements? The requirements mention the badge but do not define how coaches are verified. Resolve before implementing the trust badge system.
+1. ~~**Framework choice** — Web (Next.js) + mobile (React Native / Expo)? Or Flutter?~~ **Resolved: Flutter**
+2. ~~**Database** — PostgreSQL (Prisma) or another option?~~ **Resolved: Local/mock for now**
+3. ~~**File storage** — Cloudinary or S3?~~ **Resolved: Local/mock for now**
+4. ~~**Auth provider** — Clerk, Firebase Auth, or custom JWT?~~ **Resolved: Local/mock for now**
+5. ~~**Search** — PostgreSQL full-text or Algolia?~~ **Resolved: In-memory filtering**
+6. ~~**Color palette** — Exact hex values~~ **Resolved: Light blue theme**
+7. **Under-18 restrictions** — Define exact rules before implementing auth boundary detailed restrictions
+8. **Pricing** — Confirm exact prices before implementing payments boundary
+9. **Video compression spec** — Define target bitrate before implementing upload
+10. **Coach-Endorsed badge** — Define how coaches are verified before implementing trust badge system
 
 ---
 
@@ -76,17 +100,17 @@ Update this file after every meaningful implementation change and after every su
 
 ### Stack: Flutter + Riverpod + Local/Mock
 - Chosen: Flutter (existing), Riverpod for state management, local/mock data repositories
-- Reason: The project already existed as a Flutter project. Riverpod provides clean state management with testability. Local/mock allows us to build the full architecture without a backend dependency.
+- Reason: The project already existed as a Flutter project. Riverpod provides clean state management with testability.
 - Date: 2026-06-09
 
 ### Color Palette: Light Blue Theme
 - Chosen: Light blue accent (#4A90D9) on alice blue background (#F0F8FF)
-- Reason: User requested light blue theme; fits the "energetic, professional sports platform" brief.
+- Reason: User requested light blue theme.
 - Date: 2026-06-09
 
 ### Project Rename: elite_scout → play_smart
 - Chosen: Renamed to align with the product name defined in project-overview.md
-- Reason: The product is called "Play Smart" in all context files; the old name "Elite Scout" was inconsistent.
+- Reason: The product is called "Play Smart" in all context files.
 - Date: 2026-06-09
 
 ---
@@ -94,16 +118,12 @@ Update this file after every meaningful implementation change and after every su
 ## Git Log
 
 ```
-### feat(init): rename project to play_smart and scaffold foundation structure
-- Branch: main
-- Files changed: pubspec.yaml, lib/main.dart, lib/core/router/app_router.dart, lib/core/theme/app_theme.dart, lib/shared/types/domain_types.dart, lib/shared/utils/mock_data.dart, test/widget_test.dart, context/architecture.md, context/ui-context.md, context/progress-tracker.md
-- Tests passed: Play Smart app renders placeholder screen, Play Smart app navigates to discover route
-- Committed: 2026-06-09
-- Notes: Phase 0 complete. Project renamed from elite_scout to play_smart. Dependencies added (flutter_riverpod, mocktail, etc.). 10 system boundary folders scaffolded. Shared domain types defined (15 enums + 12 model classes). GoRouter configured with 17 routes. MockData repository with seed data. Light blue theme implemented. Tests passing.
+d146c32 feat(init): rename project to play_smart and scaffold foundation structure
+4837aa6 feat(auth): implement auth boundary with sign up, sign in, splash, and landing screens
 ```
 
 ---
 
 ## Session Notes
 
-Phase 0 (Foundation) is complete. The project has been renamed, restructured into 10 system boundaries, and populated with shared domain types, a mock data repository, theme, and router. Next step is Phase 1: Auth boundary implementation.
+Phase 0 and Phase 1 are complete and committed. Phase 2 (Profiles) has its repository, provider, and public profile screen built. The remaining work in Phase 2 is: wire the profile screen into the router, build the own profile screen with edit controls, build the profile setup onboarding flow, build the verification submission screen, write tests, and commit.

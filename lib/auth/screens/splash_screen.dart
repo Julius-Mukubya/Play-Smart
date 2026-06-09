@@ -18,11 +18,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkSession();
-  }
-
-  Future<void> _checkSession() async {
-    await ref.read(authProvider.notifier).checkSession();
+    // Schedule session check after the first frame is complete
+    // This avoids "Tried to modify a provider while the widget tree was building" error
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authProvider.notifier).checkSession();
+    });
   }
 
   @override

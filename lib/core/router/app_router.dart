@@ -4,6 +4,10 @@ import 'package:play_smart/auth/screens/landing_screen.dart';
 import 'package:play_smart/auth/screens/sign_in_screen.dart';
 import 'package:play_smart/auth/screens/sign_up_screen.dart';
 import 'package:play_smart/auth/screens/splash_screen.dart';
+import 'package:play_smart/profiles/screens/athlete_profile_screen.dart';
+import 'package:play_smart/admin/screens/verification_screen.dart';
+import 'package:play_smart/profiles/screens/athlete_setup_screen.dart';
+import 'package:play_smart/profiles/screens/my_profile_screen.dart';
 
 /// Centralised app router with role-based access.
 /// Auth routes use real screens. Other routes use placeholders until implemented.
@@ -38,12 +42,18 @@ class AppRouter {
       GoRoute(path: signIn, builder: (_, __) => const SignInScreen()),
 
       // Other routes — placeholders
-      GoRoute(path: athleteSetup, builder: (_, __) => const _PlaceholderScreen(title: 'Athlete Profile Setup')),
-      GoRoute(path: verification, builder: (_, __) => const _PlaceholderScreen(title: 'Verification')),
+      GoRoute(path: athleteSetup, builder: (_, __) => const AthleteSetupScreen()),
+      GoRoute(path: verification, builder: (_, __) => const VerificationScreen()),
       GoRoute(path: discover, builder: (_, __) => const _PlaceholderScreen(title: 'Discover Feed')),
       GoRoute(path: search, builder: (_, __) => const _PlaceholderScreen(title: 'Search')),
-      GoRoute(path: athleteProfile, builder: (_, __) => const _PlaceholderScreen(title: 'Athlete Profile')),
-      GoRoute(path: myProfile, builder: (_, __) => const _PlaceholderScreen(title: 'My Profile')),
+      GoRoute(
+        path: athleteProfile,
+        builder: (context, state) {
+          final athleteId = state.pathParameters['id'] ?? '';
+          return AthleteProfileScreen(athleteId: athleteId);
+        },
+      ),
+      GoRoute(path: myProfile, builder: (_, __) => const MyProfileScreen()),
       GoRoute(path: upload, builder: (_, __) => const _PlaceholderScreen(title: 'Upload')),
       GoRoute(path: shortlists, builder: (_, __) => const _PlaceholderScreen(title: 'Shortlists')),
       GoRoute(path: opportunities, builder: (_, __) => const _PlaceholderScreen(title: 'Opportunities')),
