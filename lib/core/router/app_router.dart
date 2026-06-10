@@ -9,6 +9,8 @@ import 'package:play_smart/admin/screens/verification_screen.dart';
 import 'package:play_smart/profiles/screens/athlete_setup_screen.dart';
 import 'package:play_smart/profiles/screens/my_profile_screen.dart';
 import 'package:play_smart/profiles/screens/upload_screen.dart';
+import 'package:play_smart/discovery/screens/discover_screen.dart';
+import 'package:play_smart/discovery/screens/search_screen.dart';
 
 /// Centralised app router with role-based access.
 /// Auth routes use real screens. Other routes use placeholders until implemented.
@@ -45,8 +47,8 @@ class AppRouter {
       // Other routes — placeholders
       GoRoute(path: athleteSetup, builder: (_, __) => const AthleteSetupScreen()),
       GoRoute(path: verification, builder: (_, __) => const VerificationScreen()),
-      GoRoute(path: discover, builder: (_, __) => const _PlaceholderScreen(title: 'Discover Feed')),
-      GoRoute(path: search, builder: (_, __) => const _PlaceholderScreen(title: 'Search')),
+      GoRoute(path: discover, builder: (_, __) => const DiscoverScreen()),
+      GoRoute(path: search, builder: (_, __) => const SearchScreen()),
       GoRoute(
         path: athleteProfile,
         builder: (context, state) {
