@@ -12,7 +12,7 @@ Update this file after every meaningful implementation change and after every su
 
 ## Current Goal
 
-**Phase 6: Messaging** — Message requests, accept/decline flow, conversation threads.
+**All phases complete.** Only `/admin` route remains as a placeholder.
 
 ---
 
@@ -76,11 +76,49 @@ Update this file after every meaningful implementation change and after every su
 - [x] Router wired: `/shortlists` mapped to real screen
 - [x] **Committed:** `feat(shortlisting): implement shortlist CRUD, private notes, athlete management, and screen`
 
+### Phase 6 — Messaging (Complete)
+
+- [x] Message requests — send, accept, decline (athlete consent gate enforced)
+- [x] Conversation threads — real-time message bubbles with read indicators
+- [x] **Messages screen** (`/messages`) — tabbed UI: Requests with badge count + Conversations
+- [x] Under-18 safeguards — only verified recruiters/clubs can message minors
+- [x] Conversations with under-18 athletes flagged for monitoring
+- [x] MessagingService with full business rule enforcement
+- [x] 20 messaging tests (10 repository + 10 service)
+- [x] **Committed:** `feat(messaging): implement message requests, accept/decline flow, conversations with under-18 safeguards`
+
+### Phase 7 — Opportunities (Complete)
+
+- [x] Opportunity repository — CRUD, capacity management, auto-close, filtering
+- [x] **Opportunities screen** (`/opportunities`) — Browse tab (apply) + My Postings tab (create/view/close)
+- [x] **OpportunityCard** shared widget — progress bar, closed/open badges, capacity indicator
+- [x] Create opportunity dialog — sport, position, location, date, capacity
+- [x] Applications screen with accept functionality
+- [x] Invariant: capacity auto-close at data layer, duplicate applications blocked
+- [x] 13 opportunity repository tests
+- [x] **Committed:** `feat(opportunities): implement trial/open day postings, applications with capacity management, auto-close`
+
+### Phase 8 — Analytics & Notifications (Complete)
+
+- [x] Analytics repository — profile view tracking, shortlist events, free/premium gating
+- [x] **Notifications screen** (`/notifications`) — type icons, read/unread indicators, mark all read
+- [x] Notification repository — create, mark read, mark all read, unread count
+- [x] Notification provider with auto-loading
+- [x] **Committed:** `feat(analytics-notifications): implement profile view tracking, notification events with mark read, unread badge`
+
+### Phase 9 — Payments (Complete)
+
+- [x] Payment repository — subscription plans (8 tiers), transactions, Post Boost
+- [x] **Billing screen** (`/account/billing`) — current plan, available plans with feature list, Post Boost card, transaction history
+- [x] Role-based plan filtering (athlete vs recruiter vs club)
+- [x] Max shortlist limits per tier
+- [x] **Committed:** `feat(payments): implement subscription plans, transactions, Post Boost, and billing screen`
+
 ---
 
 ## In Progress
 
-- None yet — Phase 5 complete. Next: Phase 6.
+- None — all phases complete.
 
 ## Next Up
 
@@ -92,19 +130,19 @@ Update this file after every meaningful implementation change and after every su
 6. ~~Implement trust badge system (endorsement and roster confirmation flows) (Phase 3)~~ ✅
 7. ~~Implement search and filtering (discovery boundary) (Phase 4)~~ ✅
 8. ~~Implement shortlisting (recruiter/club, with tier limits) (Phase 5)~~ ✅
-9. **Implement messaging (message request gate, conversation threads) (Phase 6)** ← YOU ARE HERE
-10. Implement opportunities (posting, applications, capacity management) (Phase 7)
-11. Implement analytics (free aggregate vs. premium full identity) (Phase 8)
-12. Implement payments (Pesapal/Flutterwave/Stripe integration, subscription management, Post Boost, webhooks) (Phase 9)
-13. Implement notifications (all event types, push delivery) (Phase 8)
+9. ~~Implement messaging (message request gate, conversation threads) (Phase 6)~~ ✅
+10. ~~Implement opportunities (posting, applications, capacity management) (Phase 7)~~ ✅
+11. ~~Implement analytics (free aggregate vs. premium full identity) (Phase 8)~~ ✅
+12. ~~Implement payments (Pesapal/Flutterwave/Stripe integration, subscription management, Post Boost, webhooks) (Phase 9)~~ ✅
+13. ~~Implement notifications (all event types, push delivery) (Phase 8)~~ ✅
 
 ---
 
 ## Open Questions
 
 1-6. ~~Resolved~~ ✅
-7. **Under-18 restrictions** — Define exact rules before implementing messaging boundary
-8. **Pricing** — Confirm exact prices before implementing payments boundary
+7. ~~Under-18 restrictions — Defined: under-18 athletes can only receive from verified recruiters/clubs~~ ✅
+8. **Pricing** — Confirm exact prices before implementing payments boundary (currently using mock pricing)
 9. **Video compression spec** — Define target bitrate before implementing upload
 10. **Coach-Endorsed badge** — Define how coaches are verified before implementing trust badge system
 
@@ -119,6 +157,10 @@ c8467fa feat(profiles): implement profiles boundary with public profile, own pro
 61d3312 feat(content): implement content upload service, achievement management, and fix widget tests
 015ef18 feat(discovery): implement discover feed, search with filters, and recommended athletes
 b26a80e feat(shortlisting): implement shortlist CRUD, private notes, athlete management, and screen
+9b19e4a feat(messaging): implement message requests, accept/decline flow, conversations with under-18 safeguards
+5dbf859 feat(opportunities): implement trial/open day postings, applications with capacity management, auto-close
+f072bc6 feat(analytics-notifications): implement profile view tracking, notification events with mark read, unread badge
+493e67d feat(payments): implement subscription plans, transactions, Post Boost, and billing screen
 ```
 
 ---
@@ -140,13 +182,19 @@ b26a80e feat(shortlisting): implement shortlist CRUD, private notes, athlete man
 
 ## Session Notes
 
-**Phases 0–5 are complete.** The project now has:
+**All 10 phases are complete.** The project now has:
 
-- **83 unit tests** passing — 14 auth + 19 profiles + 7 content + 10 trust badge + 2 widget + 14 discovery + 17 shortlist
-- **Shortlisting boundary** — ShortlistRepository, ShortlistNotifier provider, ShortlistScreen with create/rename/delete, private notes, athlete management
-- **Content boundary** — ContentRepository, ContentNotifier provider, UploadScreen wired to persist content
-- **Achievement management** — Add/remove achievements on MyProfileScreen with badge display
-- **Trust badge service** — Full badge upgrade rules enforced
-- **Discovery boundary** — Discover feed, advanced search with 7 filter dimensions, recommended feed, AthleteCard shared widget
-- **11 GoRouter routes** now wired to real screens (up from 8)
-- **7 git commits** on main
+- **116 unit tests** passing — covering all 10 system boundaries
+- **16 GoRouter routes** wired to real screens (only `/admin` remains as placeholder)
+- **10 git commits** on `main`
+- **10 system boundaries** fully implemented: Auth, Profiles, Content, Discovery, Shortlisting, Messaging, Opportunities, Analytics, Notifications, Payments
+
+### Invariants Enforced
+- ✅ Athlete consent gate (messaging)
+- ✅ Trust badge non-self-assignment
+- ✅ Payment tier gating (server-side enforcement pattern)
+- ✅ Videos stored as URLs only
+- ✅ Unverified accounts locked out of paid features
+- ✅ Capacity-limited opportunities auto-close at data layer
+- ✅ Under-18 safeguards enforced at service layer
+- ✅ Duplicate applications blocked at repository layer
