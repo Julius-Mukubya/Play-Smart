@@ -12,6 +12,7 @@ import 'package:play_smart/profiles/screens/upload_screen.dart';
 import 'package:play_smart/discovery/screens/discover_screen.dart';
 import 'package:play_smart/discovery/screens/search_screen.dart';
 import 'package:play_smart/shortlisting/screens/shortlist_screen.dart';
+import 'package:play_smart/messaging/screens/messages_screen.dart';
 
 /// Centralised app router with role-based access.
 /// Auth routes use real screens. Other routes use placeholders until implemented.
@@ -61,7 +62,7 @@ class AppRouter {
       GoRoute(path: upload, builder: (_, __) => const UploadScreen()),
       GoRoute(path: shortlists, builder: (_, __) => const ShortlistScreen()),
       GoRoute(path: opportunities, builder: (_, __) => const _PlaceholderScreen(title: 'Opportunities')),
-      GoRoute(path: messages, builder: (_, __) => const _PlaceholderScreen(title: 'Messages')),
+      GoRoute(path: messages, builder: (_, __) => const MessagesScreen()),
       GoRoute(path: notifications, builder: (_, __) => const _PlaceholderScreen(title: 'Notifications')),
       GoRoute(path: billing, builder: (_, __) => const _PlaceholderScreen(title: 'Billing')),
       GoRoute(path: admin, builder: (_, __) => const _PlaceholderScreen(title: 'Admin')),
