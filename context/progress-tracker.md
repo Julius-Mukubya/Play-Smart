@@ -12,7 +12,7 @@ Update this file after every meaningful implementation change and after every su
 
 ## Current Goal
 
-**Phase 4: Discovery** — Search, filtering, map view, recommended feed.
+**Phase 5: Shortlisting** — Recruiter/club shortlists, private notes, outreach tracking.
 
 ---
 
@@ -44,11 +44,31 @@ Update this file after every meaningful implementation change and after every su
 - [x] Router wired: `/athlete/:id`, `/profile`, `/onboarding/athlete`, `/onboarding/verification`
 - [x] **Committed:** `feat(profiles): implement profiles boundary with public profile, own profile, setup onboarding, and verification screens`
 
+### Phase 3 — Content & Trust Badges (Complete)
+
+- [x] Content repository — CRUD for athlete content (video, photo, post)
+- [x] Content provider (Riverpod Notifier) wired to UploadScreen
+- [x] Trust badge service with full upgrade rules (self-reported → coach-endorsed → club-verified)
+- [x] Achievement management — add/remove achievements with inline badge display on MyProfileScreen
+- [x] 7 content repository unit tests + 5 achievement management tests
+- [x] Widget tests fixed (pending timer issue)
+- [x] **Committed:** `feat(content): implement content upload service, achievement management, and fix widget tests`
+
+### Phase 4 — Discovery (Complete)
+
+- [x] **Discover Feed** (`/discover`) — main feed showing all athletes with AthleteCard component
+- [x] **Search Screen** (`/search`) — text search + filter sheet (sport, position, age range, location, availability, trust badge)
+- [x] **Recommended feed** — preference-based athlete recommendations
+- [x] **AthleteCard** shared widget — photo, name, sport/position, location, trust badge, shortlist action
+- [x] Discovery repository with text search, structured filter combinations, recommended feed
+- [x] 14 discovery unit tests (search, filters, recommendations)
+- [x] **Committed:** `feat(discovery): implement discover feed, search with filters, and recommended athletes`
+
 ---
 
 ## In Progress
 
-- **Phase 4: Discovery** — Search, filtering, map view, recommended feed
+- None yet — Phase 4 complete. Next: Phase 5.
 
 ## Next Up
 
@@ -58,8 +78,8 @@ Update this file after every meaningful implementation change and after every su
 4. ~~Implement athlete profile public view (Phase 2)~~ ✅
 5. ~~Implement content upload (video with compression, photos, posts) (Phase 3)~~ ✅
 6. ~~Implement trust badge system (endorsement and roster confirmation flows) (Phase 3)~~ ✅
-7. **Implement search and filtering (discovery boundary) (Phase 4)** ← YOU ARE HERE
-8. Implement shortlisting (recruiter/club, with tier limits) (Phase 5)
+7. ~~Implement search and filtering (discovery boundary) (Phase 4)~~ ✅
+8. **Implement shortlisting (recruiter/club, with tier limits) (Phase 5)** ← YOU ARE HERE
 9. Implement messaging (message request gate, conversation threads) (Phase 6)
 10. Implement opportunities (posting, applications, capacity management) (Phase 7)
 11. Implement analytics (free aggregate vs. premium full identity) (Phase 8)
@@ -84,6 +104,8 @@ Update this file after every meaningful implementation change and after every su
 d146c32 feat(init): rename project to play_smart and scaffold foundation structure
 4837aa6 feat(auth): implement auth boundary with sign up, sign in, splash, and landing screens
 c8467fa feat(profiles): implement profiles boundary with public profile, own profile, setup onboarding, and verification screens
+61d3312 feat(content): implement content upload service, achievement management, and fix widget tests
+015ef18 feat(discovery): implement discover feed, search with filters, and recommended athletes
 ```
 
 ---
@@ -105,11 +127,12 @@ c8467fa feat(profiles): implement profiles boundary with public profile, own pro
 
 ## Session Notes
 
-**Phase 3 (Content & Trust Badges) is complete.** The project now has:
+**Phases 3 and 4 are complete.** The project now has:
 
-- **52 unit tests** passing — 14 auth + 19 profiles (incl. 5 achievement CRUD) + 7 content repository + 10 trust badge + 2 widget
+- **66 unit tests** passing — 14 auth + 19 profiles + 7 content + 10 trust badge + 2 widget + 14 discovery
 - **Content boundary** — ContentRepository, ContentNotifier provider, UploadScreen wired to persist content
-- **Achievement management** — Add/remove achievements on MyProfileScreen with inline badge display
-- **Trust badge service** — Full badge upgrade rules enforced (self-reported → coach-endorsed → club-verified)
-- **Widget tests fixed** — Pending timer issue resolved by pumping duration in SplashScreen tests
-- **4 git commits** on main
+- **Achievement management** — Add/remove achievements on MyProfileScreen with badge display
+- **Trust badge service** — Full badge upgrade rules enforced
+- **Discovery boundary** — Discover feed, advanced search with 7 filter dimensions, recommended feed, AthleteCard shared widget
+- **10 GoRouter routes** now wired to real screens (up from 8)
+- **6 git commits** on main
