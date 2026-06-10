@@ -151,5 +151,49 @@ void main() {
       // John (coachEndorsed) and Sarah (clubVerified)
       expect(results.length, 2);
     });
+
+    test('addAchievement adds achievement to athlete', () async {
+      final achievement = Achievement(
+        id: 'test-ach',
+        title: 'Test Achievement',
+        description: 'Test description',
+        badgeLevel: TrustBadgeLevel.selfReported,
+      );
+
+      final updated = await repository.addAchievement('athlete-1-profile', achievement);
+      expect(updated.achievements.any((a) => a.id == 'test-ach'), true);
+      expect(updated.achievements.length, 3); // 2 original + 1 new
+    });
+
+    test('addAchievement throws for unknown athlete', () async {
+      final achievement = Achievement(
+        id: 'test-ach',
+        title: 'Test Achievement',
+        badgeLevel: TrustBadgeLevel.selfReported,
+      );
+
+      expect(
+        () async => await repository.addAchievement('unknown', achievement),
+        throwsA(isA<ProfileException>()),
+      );
+    });
+
+    test('removeAchievement removes achievement from athlete', () async {
+      final updated = await repository.removeAchievement('athlete-1-profile', 'ach-1');
+      expect(updated.achievements.any((a) => a.id == 'ach-1'), false);
+      expect(updated.achievements.length, 1); // Only ach-2 remains
+    });
+
+    test('removeAchievement throws for unknown athlete', () async {
+      expect(
+        () async => await repository.removeAchievement('unknown', 'ach-1'),
+        throwsA(isA<ProfileException>()),
+      );
+    });
+
+    test('removeAchievement does nothing for non-existent achievement', () async {
+      final updated = await repository.removeAchievement('athlete-1-profile', 'non-existent');
+      expect(updated.achievements.length, 2); // Unchanged
+    });
   });
 }

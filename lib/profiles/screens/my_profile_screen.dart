@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/core/router/app_router.dart';
-import 'package:play_smart/core/theme/app_theme.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:play_smart/shared/widgets/trust_badge.dart';
 import 'package:go_router/go_router.dart';
 
 /// Athlete's own profile — view, edit controls, and content management.
@@ -264,9 +264,157 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
             ),
 
           const SizedBox(height: 24),
+
+          // Achievements section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Achievements', style: theme.textTheme.titleLarge),
+                    TextButton.icon(
+                      onPressed: () => _showAddAchievementDialog(context, theme),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (athlete.achievements.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'No achievements yet. Add your first achievement to build your profile.',
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else
+                  ...athlete.achievements.map((ach) => _buildAchievementCard(theme, ach)),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildAchievementCard(ThemeData theme, Achievement achievement) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(achievement.title, style: theme.textTheme.titleMedium),
+                if (achievement.description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(achievement.description, style: theme.textTheme.bodySmall),
+                  ),
+                const SizedBox(height: 8),
+                TrustBadge(level: achievement.badgeLevel, size: BadgeSize.sm),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Remove Achievement'),
+                  content: Text('Remove "${achievement.title}"?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        ref.read(profileProvider.notifier).removeAchievement(achievement.id);
+                      },
+                      child: Text('Remove', style: TextStyle(color: theme.colorScheme.error)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddAchievementDialog(BuildContext context, ThemeData theme) async {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Achievement'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                hintText: 'e.g. Top Scorer 2025',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                hintText: 'e.g. Scored 15 goals in the season',
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => titleController.text.trim().isEmpty ? null : Navigator.pop(ctx, true),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && titleController.text.trim().isNotEmpty) {
+      final now = DateTime.now();
+      ref.read(profileProvider.notifier).addAchievement(
+        Achievement(
+          id: 'ach-${now.millisecondsSinceEpoch}',
+          title: titleController.text.trim(),
+          description: descriptionController.text.trim(),
+          badgeLevel: TrustBadgeLevel.selfReported,
+        ),
+      );
+    }
+
+    titleController.dispose();
+    descriptionController.dispose();
   }
 
   Widget _buildQuickStat(

@@ -86,6 +86,72 @@ class ProfileRepository {
     return total > 0 ? filled / total : 0.0;
   }
 
+  /// Add an achievement to an athlete.
+  Future<Athlete> addAchievement(String athleteId, Achievement achievement) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _athletes.indexWhere((a) => a.id == athleteId);
+    if (index < 0) throw ProfileException('Profile not found.');
+    final athlete = _athletes[index];
+    final updatedAchievements = [...athlete.achievements, achievement];
+    final updatedAthlete = Athlete(
+      id: athlete.id,
+      userId: athlete.userId,
+      displayName: athlete.displayName,
+      photoUrl: athlete.photoUrl,
+      sports: athlete.sports,
+      positions: athlete.positions,
+      age: athlete.age,
+      height: athlete.height,
+      weight: athlete.weight,
+      dominantFootHand: athlete.dominantFootHand,
+      currentTeam: athlete.currentTeam,
+      country: athlete.country,
+      city: athlete.city,
+      bio: athlete.bio,
+      availabilityStatus: athlete.availabilityStatus,
+      achievements: updatedAchievements,
+      content: athlete.content,
+      profileBadgeLevel: athlete.profileBadgeLevel,
+      profileCompleteness: athlete.profileCompleteness,
+      createdAt: athlete.createdAt,
+    );
+    _athletes[index] = updatedAthlete;
+    return updatedAthlete;
+  }
+
+  /// Remove an achievement from an athlete.
+  Future<Athlete> removeAchievement(String athleteId, String achievementId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _athletes.indexWhere((a) => a.id == athleteId);
+    if (index < 0) throw ProfileException('Profile not found.');
+    final athlete = _athletes[index];
+    final updatedAchievements = athlete.achievements.where((a) => a.id != achievementId).toList();
+    final updatedAthlete = Athlete(
+      id: athlete.id,
+      userId: athlete.userId,
+      displayName: athlete.displayName,
+      photoUrl: athlete.photoUrl,
+      sports: athlete.sports,
+      positions: athlete.positions,
+      age: athlete.age,
+      height: athlete.height,
+      weight: athlete.weight,
+      dominantFootHand: athlete.dominantFootHand,
+      currentTeam: athlete.currentTeam,
+      country: athlete.country,
+      city: athlete.city,
+      bio: athlete.bio,
+      availabilityStatus: athlete.availabilityStatus,
+      achievements: updatedAchievements,
+      content: athlete.content,
+      profileBadgeLevel: athlete.profileBadgeLevel,
+      profileCompleteness: athlete.profileCompleteness,
+      createdAt: athlete.createdAt,
+    );
+    _athletes[index] = updatedAthlete;
+    return updatedAthlete;
+  }
+
   /// Filter athletes by search criteria.
   List<Athlete> searchAthletes({
     String? sport,

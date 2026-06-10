@@ -10,6 +10,9 @@ void main() {
       const ProviderScope(child: PlaySmartApp()),
     );
 
+    // Pump with duration to let pending timers (SplashScreen session check) settle
+    await tester.pump(const Duration(milliseconds: 200));
+
     // Verify MaterialApp.router is rendering
     expect(find.byType(MaterialApp), findsOneWidget);
   });
@@ -19,6 +22,9 @@ void main() {
     await tester.pumpWidget(
       const ProviderScope(child: PlaySmartApp()),
     );
+
+    // Pump with duration to let pending timers settle
+    await tester.pump(const Duration(milliseconds: 200));
 
     // The splash screen displays the app name
     expect(find.text('Play Smart'), findsWidgets);

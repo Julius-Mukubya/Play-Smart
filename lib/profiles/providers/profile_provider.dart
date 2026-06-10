@@ -54,6 +54,30 @@ class ProfileNotifier extends Notifier<AsyncValue<Athlete?>> {
       state = AsyncValue.error(e, st);
     }
   }
+
+  /// Add an achievement to the current athlete profile.
+  Future<void> addAchievement(Achievement achievement) async {
+    try {
+      final current = state.value;
+      if (current == null) return;
+      final result = await _repository.addAchievement(current.id, achievement);
+      state = AsyncValue.data(result);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Remove an achievement from the current athlete profile.
+  Future<void> removeAchievement(String achievementId) async {
+    try {
+      final current = state.value;
+      if (current == null) return;
+      final result = await _repository.removeAchievement(current.id, achievementId);
+      state = AsyncValue.data(result);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
 }
 
 /// Profile state provider.

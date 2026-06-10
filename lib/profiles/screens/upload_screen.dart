@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Content Upload screen — athlete uploads video, photo, or post.
-class UploadScreen extends StatefulWidget {
+/// Uses ContentRepository to persist uploaded content.
+class UploadScreen extends ConsumerStatefulWidget {
   const UploadScreen({super.key});
 
   @override
-  State<UploadScreen> createState() => _UploadScreenState();
+  ConsumerState<UploadScreen> createState() => _UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
+class _UploadScreenState extends ConsumerState<UploadScreen> {
   ContentType _selectedType = ContentType.video;
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -36,7 +41,22 @@ class _UploadScreenState extends State<UploadScreen> {
 
     setState(() => _isUploading = true);
 
-    // Simulate upload with compression for videos
+    // Get current athlete ID from auth state
+    final authState = ref.read(authProvider);
+    String athleteId;
+    if (authState is AuthAuthenticated) {
+      athleteId = authState.user.id;
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be signed in to upload.')),
+        );
+      }
+      setState(() => _isUploading = false);
+      return;
+    }
+
+    // Simulate upload progress with compression for videos
     final steps = _selectedType == ContentType.video ? 5 : 3;
     for (int i = 1; i <= steps; i++) {
       await Future.delayed(const Duration(milliseconds: 600));
@@ -45,15 +65,44 @@ class _UploadScreenState extends State<UploadScreen> {
     }
 
     if (!mounted) return;
-    setState(() => _isUploading = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${_selectedType.name.capitalize()} uploaded successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    context.go(AppRouter.myProfile);
+    try {
+      // Create content via repository
+      final now = DateTime.now();
+      final content = AthleteContent(
+        id: 'content-${now.millisecondsSinceEpoch}',
+        athleteId: athleteId,
+        type: _selectedType,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        fileUrl: _selectedType != ContentType.post
+            ? 'mock://uploads/${now.millisecondsSinceEpoch}.${_selectedType == ContentType.video ? "mp4" : "jpg"}'
+            : null,
+        momentTag: _selectedMoment,
+      );
+
+      await ref.read(contentProvider.notifier).createContent(content);
+
+      if (!mounted) return;
+      setState(() => _isUploading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_selectedType.name[0].toUpperCase()}${_selectedType.name.substring(1)} uploaded successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.go(AppRouter.myProfile);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Upload failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -284,8 +333,4 @@ class _UploadScreenState extends State<UploadScreen> {
       MomentType.save => (Icons.sports_handball, 'Save'),
     };
   }
-}
-
-extension on String {
-  String capitalize() => isNotEmpty ? '${this[0].toUpperCase()}${substring(1)}' : '';
 }

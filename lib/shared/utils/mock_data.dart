@@ -59,6 +59,11 @@ class MockData {
     ),
   ];
 
+  /// Flat list of all content across all athletes.
+  static List<AthleteContent> get allContent => athletes
+      .expand((a) => a.content)
+      .toList();
+
   static final List<Athlete> athletes = [
     Athlete(
       id: 'athlete-1-profile',

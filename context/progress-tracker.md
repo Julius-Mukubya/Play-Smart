@@ -8,11 +8,11 @@ Update this file after every meaningful implementation change and after every su
 
 - [x] Not started
 - [x] In progress
-- [ ] Complete
+- [x] Complete
 
 ## Current Goal
 
-**Phase 3: Content & Trust Badges** — Content upload (video, photo, posts) with moment type tagging, trust badge system (Self-Reported, Coach-Endorsed, Club-Verified), achievements management.
+**Phase 4: Discovery** — Search, filtering, map view, recommended feed.
 
 ---
 
@@ -48,7 +48,7 @@ Update this file after every meaningful implementation change and after every su
 
 ## In Progress
 
-- None yet — Phase 2 complete. Next: Phase 3.
+- **Phase 4: Discovery** — Search, filtering, map view, recommended feed
 
 ## Next Up
 
@@ -56,9 +56,9 @@ Update this file after every meaningful implementation change and after every su
 2. ~~Implement athlete onboarding: profile setup flow (Phase 2)~~ ✅
 3. ~~Implement recruiter/club verification submission flow (Phase 2)~~ ✅
 4. ~~Implement athlete profile public view (Phase 2)~~ ✅
-5. **Implement content upload (video with compression, photos, posts) (Phase 3)** ← YOU ARE HERE
-6. Implement trust badge system (endorsement and roster confirmation flows) (Phase 3)
-7. Implement search and filtering (discovery boundary) (Phase 4)
+5. ~~Implement content upload (video with compression, photos, posts) (Phase 3)~~ ✅
+6. ~~Implement trust badge system (endorsement and roster confirmation flows) (Phase 3)~~ ✅
+7. **Implement search and filtering (discovery boundary) (Phase 4)** ← YOU ARE HERE
 8. Implement shortlisting (recruiter/club, with tier limits) (Phase 5)
 9. Implement messaging (message request gate, conversation threads) (Phase 6)
 10. Implement opportunities (posting, applications, capacity management) (Phase 7)
@@ -105,10 +105,11 @@ c8467fa feat(profiles): implement profiles boundary with public profile, own pro
 
 ## Session Notes
 
-**Phases 0, 1, and 2 are complete.** The project now has:
+**Phase 3 (Content & Trust Badges) is complete.** The project now has:
 
-- **17 GoRouter routes** — 8 wired to real screens, 9 with placeholders
-- **Auth boundary** — Full sign-up/in flow with role selection, DOB age gate, verification submission
-- **Profiles boundary** — Public profile view, own profile with edit controls, 4-step onboarding, credential upload for verification
-- **28 unit tests** — all passing (14 auth + 14 profiles)
-- **3 git commits** on main
+- **52 unit tests** passing — 14 auth + 19 profiles (incl. 5 achievement CRUD) + 7 content repository + 10 trust badge + 2 widget
+- **Content boundary** — ContentRepository, ContentNotifier provider, UploadScreen wired to persist content
+- **Achievement management** — Add/remove achievements on MyProfileScreen with inline badge display
+- **Trust badge service** — Full badge upgrade rules enforced (self-reported → coach-endorsed → club-verified)
+- **Widget tests fixed** — Pending timer issue resolved by pumping duration in SplashScreen tests
+- **4 git commits** on main
