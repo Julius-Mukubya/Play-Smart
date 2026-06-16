@@ -1,3 +1,4 @@
+import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/profiles/repositories/profile_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -12,6 +13,40 @@ class DiscoveryRepository {
   /// Get all athletes for the discover feed.
   List<Athlete> getDiscoverFeed() {
     return _profileRepository.getAllAthletes();
+  }
+
+  /// Get a content-first feed — each athlete's content pieces become individual
+  /// feed cards, interleaved so the feed feels varied.
+  List<FeedItem> getContentFeed() {
+    final athletes = _profileRepository.getAllAthletes();
+
+    // Expand each athlete's content into individual FeedItems, then interleave
+    // by athlete so the feed isn't just one athlete's content in a row.
+    final List<List<FeedItem>> byAthlete = athletes
+        .where((a) => a.content.isNotEmpty)
+        .map((a) => a.content
+            .map((c) => FeedItem(
+                  content: c,
+                  athlete: a,
+                  // Mock engagement counts — replace with real data later
+                  likeCount: (a.id.hashCode.abs() % 200) + 10,
+                  commentCount: (c.id.hashCode.abs() % 40) + 1,
+                ))
+            .toList())
+        .toList();
+
+    // Round-robin interleave so different athletes alternate in the feed
+    final List<FeedItem> feed = [];
+    int maxLen = byAthlete.fold(0, (m, l) => l.length > m ? l.length : m);
+    for (int i = 0; i < maxLen; i++) {
+      for (final list in byAthlete) {
+        if (i < list.length) feed.add(list[i]);
+      }
+    }
+
+    // Athletes with no content still appear as a profile card at the end
+    // (handled separately in the screen via getDiscoverFeed).
+    return feed;
   }
 
   /// Search athletes with filters.

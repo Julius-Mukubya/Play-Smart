@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/auth/screens/landing_screen.dart';
 import 'package:play_smart/auth/screens/sign_in_screen.dart';
 import 'package:play_smart/auth/screens/sign_up_screen.dart';
@@ -16,12 +19,25 @@ import 'package:play_smart/messaging/screens/messages_screen.dart';
 import 'package:play_smart/opportunities/screens/opportunities_screen.dart';
 import 'package:play_smart/notifications/screens/notifications_screen.dart';
 import 'package:play_smart/payments/screens/billing_screen.dart';
+import 'package:play_smart/core/shell/main_shell.dart';
+import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:play_smart/settings/screens/privacy_safety_screen.dart';
+import 'package:play_smart/settings/screens/help_support_screen.dart';
 
-/// Centralised app router with role-based access.
-/// Auth routes use real screens. Other routes use placeholders until implemented.
+/// Centralised app router with bottom navigation shell.
+///
+/// Shell tab order (5 tabs):
+///   0 — Discover
+///   1 — Search
+///   2 — Middle (Upload for athletes / Opportunities for recruiters & clubs)
+///   3 — Messages
+///   4 — Profile
+///
+/// Auth routes and onboarding sit outside the shell.
 class AppRouter {
   AppRouter._();
 
+  // Route path constants
   static const String splash = '/';
   static const String landing = '/landing';
   static const String signUp = '/signup';
@@ -39,41 +55,152 @@ class AppRouter {
   static const String notifications = '/notifications';
   static const String billing = '/account/billing';
   static const String admin = '/admin';
+  static const String privacy = '/settings/privacy';
+  static const String helpSupport = '/settings/help';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
     routes: [
-      // Auth routes — implemented
+      // ── Auth routes (outside shell) ─────────────────────────────────────
       GoRoute(path: splash, builder: (_, __) => const SplashScreen()),
       GoRoute(path: landing, builder: (_, __) => const LandingScreen()),
       GoRoute(path: signUp, builder: (_, __) => const SignUpScreen()),
       GoRoute(path: signIn, builder: (_, __) => const SignInScreen()),
 
-      // Other routes — placeholders
+      // ── Onboarding (outside shell) ──────────────────────────────────────
       GoRoute(path: athleteSetup, builder: (_, __) => const AthleteSetupScreen()),
       GoRoute(path: verification, builder: (_, __) => const VerificationScreen()),
-      GoRoute(path: discover, builder: (_, __) => const DiscoverScreen()),
-      GoRoute(path: search, builder: (_, __) => const SearchScreen()),
+
+      // ── Admin (outside shell, placeholder) ──────────────────────────────
+      GoRoute(path: admin, builder: (_, __) => const _PlaceholderScreen(title: 'Admin')),
+
+      // ── Settings screens (outside shell) ────────────────────────────────
+      GoRoute(path: privacy, builder: (_, __) => const PrivacySafetyScreen()),
+      GoRoute(path: helpSupport, builder: (_, __) => const HelpSupportScreen()),
+
+      // ── Deep-link athlete profile (outside shell) ────────────────────────
       GoRoute(
         path: athleteProfile,
         builder: (context, state) {
-          final athleteId = state.pathParameters['id'] ?? '';
-          return AthleteProfileScreen(athleteId: athleteId);
+          final id = state.pathParameters['id'] ?? '';
+          return AthleteProfileScreen(athleteId: id);
         },
       ),
-      GoRoute(path: myProfile, builder: (_, __) => const MyProfileScreen()),
-      GoRoute(path: upload, builder: (_, __) => const UploadScreen()),
-      GoRoute(path: shortlists, builder: (_, __) => const ShortlistScreen()),
-      GoRoute(path: opportunities, builder: (_, __) => const OpportunitiesScreen()),
-      GoRoute(path: messages, builder: (_, __) => const MessagesScreen()),
-      GoRoute(path: notifications, builder: (_, __) => const NotificationsScreen()),
-      GoRoute(path: billing, builder: (_, __) => const BillingScreen()),
-      GoRoute(path: admin, builder: (_, __) => const _PlaceholderScreen(title: 'Admin')),
+
+      // ── Notifications (top-level so it can be pushed from anywhere) ──────
+      GoRoute(
+        path: notifications,
+        builder: (_, __) => const NotificationsScreen(),
+      ),
+
+      // ── Billing (top-level so it can be pushed from anywhere) ────────────
+      GoRoute(
+        path: billing,
+        builder: (_, __) => const BillingScreen(),
+      ),
+
+      // ── Shortlists (top-level so it can be pushed from anywhere) ─────────
+      GoRoute(
+        path: shortlists,
+        builder: (_, __) => const ShortlistScreen(),
+      ),
+
+      // ── Main app shell with persistent bottom nav ────────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
+        branches: [
+          // Tab 0 — Discover
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: discover,
+                builder: (_, __) => const DiscoverScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 1 — Search
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: search,
+                builder: (_, __) => const SearchScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 2 — Middle: role-adaptive screen
+          // A thin wrapper reads the user role and shows Upload or Opportunities.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: upload,
+                builder: (_, __) => const _MiddleTabScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 3 — Messages
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: messages,
+                builder: (_, __) => const MessagesScreen(),
+              ),
+            ],
+          ),
+
+          // Tab 4 — Profile
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: myProfile,
+                builder: (_, __) => const MyProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'shortlists',
+                    builder: (_, __) => const ShortlistScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notifications',
+                    builder: (_, __) => const NotificationsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'billing',
+                    builder: (_, __) => const BillingScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
   );
 }
 
-/// Temporary placeholder screen until real screens are implemented.
+/// Middle tab (index 2) — shows UploadScreen for athletes,
+/// OpportunitiesScreen for recruiters and clubs.
+class _MiddleTabScreen extends ConsumerWidget {
+  const _MiddleTabScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
+    if (authState is AuthAuthenticated) {
+      final role = authState.user.role;
+      if (role == AccountRole.recruiter || role == AccountRole.club) {
+        return const OpportunitiesScreen();
+      }
+    }
+
+    return const UploadScreen();
+  }
+}
+
+/// Temporary placeholder screen.
 class _PlaceholderScreen extends StatelessWidget {
   final String title;
   const _PlaceholderScreen({required this.title});
@@ -90,16 +217,9 @@ class _PlaceholderScreen extends StatelessWidget {
             children: [
               const Icon(Icons.construction, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
+              Text(title, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
-              const Text(
-                'Coming soon — being implemented in the next feature unit.',
-                textAlign: TextAlign.center,
-              ),
+              const Text('Coming soon.', textAlign: TextAlign.center),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => context.go(AppRouter.discover),

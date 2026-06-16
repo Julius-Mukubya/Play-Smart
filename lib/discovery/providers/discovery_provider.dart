@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/discovery/repositories/discovery_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -72,12 +73,16 @@ class SearchFilters {
 /// Discovery state.
 class DiscoveryState {
   final List<Athlete> athletes;
+  final List<FeedItem> feedItems;
+  final Set<String> likedContentIds;  // content IDs the current user has liked
   final bool isLoading;
   final String? error;
   final SearchFilters filters;
 
   const DiscoveryState({
     this.athletes = const [],
+    this.feedItems = const [],
+    this.likedContentIds = const {},
     this.isLoading = false,
     this.error,
     this.filters = const SearchFilters(),
@@ -85,6 +90,8 @@ class DiscoveryState {
 
   DiscoveryState copyWith({
     List<Athlete>? athletes,
+    List<FeedItem>? feedItems,
+    Set<String>? likedContentIds,
     bool? isLoading,
     String? error,
     SearchFilters? filters,
@@ -92,6 +99,8 @@ class DiscoveryState {
   }) {
     return DiscoveryState(
       athletes: athletes ?? this.athletes,
+      feedItems: feedItems ?? this.feedItems,
+      likedContentIds: likedContentIds ?? this.likedContentIds,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       filters: filters ?? this.filters,
@@ -108,19 +117,35 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
 
   DiscoveryRepository get _repository => ref.read(discoveryRepositoryProvider);
 
-  /// Load the discover feed.
+  /// Load the discover feed (both athlete list and content feed).
   Future<void> loadDiscoverFeed() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final athletes = _repository.getDiscoverFeed();
-      state = state.copyWith(athletes: athletes, isLoading: false);
-    } catch (e, st) {
+      final feedItems = _repository.getContentFeed();
       state = state.copyWith(
+        athletes: athletes,
+        feedItems: feedItems,
         isLoading: false,
-        error: e.toString(),
       );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  /// Toggle like on a content item.
+  void toggleLike(String contentId) {
+    final liked = Set<String>.from(state.likedContentIds);
+    if (liked.contains(contentId)) {
+      liked.remove(contentId);
+    } else {
+      liked.add(contentId);
+    }
+    state = state.copyWith(likedContentIds: liked);
+  }
+
+  /// Whether a content item is liked by the current user.
+  bool isLiked(String contentId) => state.likedContentIds.contains(contentId);
 
   /// Search athletes with current filters.
   Future<void> search() async {
@@ -137,7 +162,7 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
         minBadge: state.filters.minBadge,
       );
       state = state.copyWith(athletes: results, isLoading: false);
-    } catch (e, st) {
+    } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),

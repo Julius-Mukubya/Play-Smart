@@ -258,7 +258,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Text('Availability', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<AvailabilityStatus>(
-                  value: availability,
+                  initialValue: availability,
                   decoration: const InputDecoration(prefixIcon: Icon(Icons.access_time)),
                   hint: const Text('Any'),
                   items: AvailabilityStatus.values.map((status) {
@@ -281,7 +281,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 Text('Minimum Trust Badge', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<TrustBadgeLevel>(
-                  value: minBadge,
+                  initialValue: minBadge,
                   decoration: const InputDecoration(prefixIcon: Icon(Icons.verified)),
                   hint: const Text('Any'),
                   items: TrustBadgeLevel.values.map((level) {
