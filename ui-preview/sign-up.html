@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Sign Up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Sign Up</h2>
+  </div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <!-- App bar -->
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Create Account</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content p-24">
+
+        <!-- Role selector -->
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;">I am a…</div>
+
+        <div class="role-card selected">
+          <div class="role-icon">🏃</div>
+          <div class="role-text">
+            <p class="role-title">Athlete</p>
+            <p class="role-sub">Create a profile and get discovered</p>
+          </div>
+          <span class="role-check">✓</span>
+        </div>
+        <div class="role-card">
+          <div class="role-icon">🔍</div>
+          <div class="role-text">
+            <p class="role-title">Recruiter or Scout</p>
+            <p class="role-sub">Find and shortlist talent</p>
+          </div>
+        </div>
+        <div class="role-card" style="margin-bottom:24px;">
+          <div class="role-icon">🏢</div>
+          <div class="role-text">
+            <p class="role-title">Club or Organisation</p>
+            <p class="role-sub">Post trials and manage recruitment</p>
+          </div>
+        </div>
+
+        <!-- Fields -->
+        <div class="input-group">
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input class="input-field" type="text" placeholder="Full Name">
+          </div>
+        </div>
+        <div class="input-group">
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input class="input-field" type="email" placeholder="Email">
+          </div>
+        </div>
+        <div class="input-group">
+          <div class="input-wrap">
+            <span class="input-icon">📅</span>
+            <input class="input-field" type="text" placeholder="Date of Birth" value="15/04/2001">
+          </div>
+        </div>
+        <div class="input-group">
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input class="input-field" type="password" placeholder="Password">
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:24px;">
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input class="input-field" type="password" placeholder="Confirm Password">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full mb-16">Create Account</button>
+
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:13px;">
+          <span class="text-muted">Already have an account?</span>
+          <a href="sign-in.html" class="btn-ghost" style="padding:0;">Sign In</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

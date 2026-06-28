@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+supabase.md
+supabase_schema.sql
+supabase_storage_init.sql
+supabase_setup_completion.sql

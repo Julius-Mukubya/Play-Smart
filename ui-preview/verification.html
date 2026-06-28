@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Verification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Account Verification</h2>
+  </div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Account Verification</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content p-24">
+
+        <!-- Info banner -->
+        <div class="info-banner mb-24">
+          <span>ℹ️</span>
+          <span>Submit your credentials to verify your account. Once approved, you'll unlock all features including shortlisting, messaging, and posting opportunities.</span>
+        </div>
+
+        <!-- Status -->
+        <div style="background:var(--bg-surface-alt);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+          <span style="font-size:20px;">⏳</span>
+          <div>
+            <div style="font-weight:600;font-size:13px;color:var(--state-warning);">Status: Pending Review</div>
+            <div style="font-size:12px;color:var(--text-muted);">Submit your documents below</div>
+          </div>
+        </div>
+
+        <!-- Features unlock -->
+        <div class="section-title mb-12">Features that will unlock</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;"><span>🔍</span> Full athlete search and filtering</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;"><span>📋</span> Create and manage shortlists</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;"><span>💬</span> Contact athletes directly</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;"><span>🏟️</span> Post trial opportunities</div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:13px;"><span>📊</span> Access recruitment analytics</div>
+        </div>
+
+        <!-- Document type dropdown -->
+        <div class="input-group">
+          <label class="input-label">Document Type</label>
+          <div class="input-wrap">
+            <span class="input-icon">📄</span>
+            <select class="input-field" style="appearance:none;">
+              <option value="">Select document type</option>
+              <option selected>Scouting License / Certification</option>
+              <option>Club Employment Letter</option>
+              <option>FIFA Agent License</option>
+              <option>National Association ID</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Upload area -->
+        <div style="border:1.5px dashed var(--border-default);border-radius:12px;padding:32px;text-align:center;margin-bottom:16px;cursor:pointer;background:var(--bg-surface);">
+          <div style="font-size:36px;margin-bottom:8px;color:var(--accent-primary);">☁️</div>
+          <div style="font-weight:600;font-size:14px;margin-bottom:4px;">Tap to upload document</div>
+          <div style="font-size:12px;color:var(--text-muted);">PDF, JPG, or PNG (max 10MB)</div>
+        </div>
+
+        <!-- Notes -->
+        <div class="input-group" style="margin-bottom:28px;">
+          <label class="input-label">Additional notes (optional)</label>
+          <textarea class="input-field" rows="3" placeholder="Any additional information for the review team..."></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-full">Submit for Verification</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

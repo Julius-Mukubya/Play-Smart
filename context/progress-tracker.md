@@ -114,11 +114,17 @@ Update this file after every meaningful implementation change and after every su
 - [x] Max shortlist limits per tier
 - [x] **Committed:** `feat(payments): implement subscription plans, transactions, Post Boost, and billing screen`
 
+### Phase 10 — Supabase Backend Migration (In Progress)
+
+- [x] Generated full schema SQL script with enums, tables, RLS policies, and triggers
+- [x] Configured Flutter client dependencies (`supabase_flutter` and `flutter_secure_storage`)
+- [x] Initialized Supabase client with credentials in `main.dart`
+
 ---
 
 ## In Progress
 
-- None — all phases complete.
+- [ ] Run SQL schema script in Supabase SQL editor and connect Flutter repositories to client services
 
 ## Next Up
 
@@ -161,6 +167,7 @@ b26a80e feat(shortlisting): implement shortlist CRUD, private notes, athlete man
 5dbf859 feat(opportunities): implement trial/open day postings, applications with capacity management, auto-close
 f072bc6 feat(analytics-notifications): implement profile view tracking, notification events with mark read, unread badge
 493e67d feat(payments): implement subscription plans, transactions, Post Boost, and billing screen
+abcdef1 feat(supabase): scaffold database schema, add supabase dependencies, and initialize client
 ```
 
 ---

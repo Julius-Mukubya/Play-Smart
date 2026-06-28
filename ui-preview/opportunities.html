@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Opportunities</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center; gap:24px;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Opportunities — Browse tab (Athlete view)</h2>
+  </div>
+
+  <!-- Athlete browse view -->
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <span class="app-bar-title">Opportunities</span>
+    </div>
+    <div class="phone-screen">
+      <div class="tab-bar">
+        <div class="tab-item active">Browse</div>
+      </div>
+      <div class="screen-content" style="padding-top:4px;">
+
+        <!-- Opportunity 1 — Open -->
+        <div class="opp-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:15px;flex:1;padding-right:8px;">Open Trials — Kampala City FC</div>
+            <span class="opp-badge open">Open</span>
+          </div>
+          <div class="opp-meta">
+            <span class="opp-meta-chip">⚽ Football</span>
+            <span class="opp-meta-chip">👤 Striker</span>
+            <span class="opp-meta-chip">📍 Kampala</span>
+            <span class="opp-meta-chip">📅 15 Mar 2026</span>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin:8px 0 10px;">
+            Looking for strikers aged 18–26 for the upcoming FUFA Big League season. 
+            Strong technical skills and work ethic required.
+          </p>
+          <!-- Capacity bar -->
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+              <span>Capacity</span><span>12 / 20 spots filled</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:60%;"></div></div>
+          </div>
+          <button class="btn btn-primary btn-sm btn-full">Apply</button>
+        </div>
+
+        <!-- Opportunity 2 — Open -->
+        <div class="opp-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:15px;flex:1;padding-right:8px;">Basketball Academy Open Day</div>
+            <span class="opp-badge open">Open</span>
+          </div>
+          <div class="opp-meta">
+            <span class="opp-meta-chip">🏀 Basketball</span>
+            <span class="opp-meta-chip">📍 Entebbe</span>
+            <span class="opp-meta-chip">📅 22 Mar 2026</span>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);line-height:1.5;margin:8px 0 10px;">
+            Open to all positions. Scholarships available for outstanding candidates.
+          </p>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+              <span>Capacity</span><span>5 / 15 spots filled</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:33%;"></div></div>
+          </div>
+          <button class="btn btn-primary btn-sm btn-full">Apply</button>
+        </div>
+
+        <!-- Opportunity 3 — Closed -->
+        <div class="opp-card" style="opacity:0.65;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:15px;flex:1;padding-right:8px;">Athletics Talent Search 2026</div>
+            <span class="opp-badge closed">Closed</span>
+          </div>
+          <div class="opp-meta">
+            <span class="opp-meta-chip">🏃 Athletics</span>
+            <span class="opp-meta-chip">📍 Gulu</span>
+            <span class="opp-meta-chip">📅 1 Feb 2026</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+              <span>Capacity</span><span>25 / 25 — Full</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:100%;background:var(--state-error);"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">🔭</span>Discover</div>
+      <div class="bottom-nav-item active"><span class="bottom-nav-icon">🏟️</span>Opps</div>
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">🔔</span>Alerts</div>
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">👤</span>Profile</div>
+    </div>
+  </div>
+
+  <!-- Recruiter My Postings view -->
+  <div class="screen-label-bar"><h2>My Postings tab (Recruiter view)</h2></div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <span class="app-bar-title">Opportunities</span>
+      <button class="app-bar-action" style="margin-left:auto;">+</button>
+    </div>
+    <div class="phone-screen">
+      <div class="tab-bar">
+        <div class="tab-item">Browse</div>
+        <div class="tab-item active">My Postings</div>
+      </div>
+      <div class="screen-content" style="padding-top:4px;">
+
+        <div class="opp-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:15px;flex:1;">Open Trials — Kampala City FC</div>
+            <span class="opp-badge open">Open</span>
+          </div>
+          <div class="opp-meta">
+            <span class="opp-meta-chip">⚽ Football · Striker</span>
+            <span class="opp-meta-chip">📅 15 Mar 2026</span>
+          </div>
+          <div style="margin:10px 0;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+              <span>12 / 20 spots filled</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:60%;"></div></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" style="flex:1;">👥 View Applications</button>
+            <button class="btn btn-outline-error btn-sm">✕ Close</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Upload Content</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Upload Content</h2>
+  </div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Upload Content</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content p-24">
+
+        <!-- Type selector -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Content Type</div>
+        <div style="display:flex;gap:8px;margin-bottom:22px;">
+          <div style="flex:1;border:2px solid var(--accent-primary);background:rgba(74,144,217,0.08);border-radius:12px;padding:12px;text-align:center;cursor:pointer;">
+            <div style="font-size:22px;margin-bottom:4px;">🎬</div>
+            <div style="font-size:11px;font-weight:600;color:var(--accent-primary);">Video</div>
+          </div>
+          <div style="flex:1;border:1.5px solid var(--border-default);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:var(--bg-surface);">
+            <div style="font-size:22px;margin-bottom:4px;">🖼️</div>
+            <div style="font-size:11px;color:var(--text-muted);">Photo</div>
+          </div>
+          <div style="flex:1;border:1.5px solid var(--border-default);border-radius:12px;padding:12px;text-align:center;cursor:pointer;background:var(--bg-surface);">
+            <div style="font-size:22px;margin-bottom:4px;">📝</div>
+            <div style="font-size:11px;color:var(--text-muted);">Post</div>
+          </div>
+        </div>
+
+        <!-- Drop zone -->
+        <div style="border:1.5px dashed var(--border-default);border-radius:12px;height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:var(--bg-surface);margin-bottom:22px;">
+          <div style="font-size:40px;color:var(--accent-primary);">🎬</div>
+          <div style="font-size:14px;font-weight:600;">Tap to select video</div>
+          <div style="font-size:12px;color:var(--text-muted);">MP4, max 100MB. Will be compressed.</div>
+        </div>
+
+        <!-- Title -->
+        <div class="input-group">
+          <div class="input-wrap">
+            <span class="input-icon">📋</span>
+            <input class="input-field" type="text" placeholder="Title" value="Match Highlights — March 2026">
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="input-group" style="margin-bottom:22px;">
+          <textarea class="input-field" rows="3" placeholder="Description (optional)">Scored twice in the semi-final match against Entebbe FC</textarea>
+        </div>
+
+        <!-- Moment tag -->
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Moment Type (optional)</div>
+        <div class="chip-wrap" style="margin-bottom:16px;">
+          <button class="choice-chip selected">⚽ Goal</button>
+          <button class="choice-chip">🤝 Assist</button>
+          <button class="choice-chip">💨 Sprint</button>
+          <button class="choice-chip">🛡️ Tackle</button>
+          <button class="choice-chip">🥅 Save</button>
+        </div>
+
+        <!-- Compression notice -->
+        <div style="background:rgba(74,144,217,0.08);border-radius:10px;padding:12px;display:flex;gap:8px;align-items:flex-start;margin-bottom:22px;">
+          <span>🗜️</span>
+          <p style="font-size:12px;color:var(--text-muted);margin:0;line-height:1.5;">Videos will be compressed for optimal playback on mobile connections.</p>
+        </div>
+
+        <button class="btn btn-primary btn-full">☁️ Upload</button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Uploading state variant -->
+  <div style="margin-top:24px;" class="screen-label-bar"><h2>Upload — in progress</h2></div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Upload Content</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content p-24" style="padding-top:60px;">
+        <div style="text-align:center;padding:32px 0;">
+          <div style="font-size:56px;margin-bottom:16px;">🗜️</div>
+          <div style="font-weight:600;font-size:16px;margin-bottom:6px;">Compressing video…</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Optimising for mobile playback</div>
+          <div class="progress-track" style="margin:0 auto;max-width:240px;height:8px;">
+            <div class="progress-fill" style="width:45%;"></div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">45%</div>
+        </div>
+        <button class="btn btn-primary btn-full" style="opacity:0.5;cursor:not-allowed;">
+          <div style="width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:8px;"></div>
+          Uploading…
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+</body>
+</html>

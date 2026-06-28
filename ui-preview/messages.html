@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Messages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center; gap:24px;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Messages — Requests tab</h2>
+  </div>
+
+  <!-- Requests tab -->
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar"><span class="app-bar-title">Messages</span></div>
+    <div class="phone-screen">
+      <div class="tab-bar">
+        <div class="tab-item active" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+          Requests
+          <span style="background:var(--state-error);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:100px;">2</span>
+        </div>
+        <div class="tab-item">Conversations</div>
+      </div>
+      <div class="screen-content" style="padding:12px;">
+
+        <!-- Request 1 -->
+        <div class="card card-padded mb-12">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="avatar avatar-md" style="background:rgba(74,144,217,0.15);">RK</div>
+            <div>
+              <div style="font-weight:600;font-size:14px;">Robert Kato</div>
+              <div style="font-size:12px;color:var(--text-muted);">Wants to connect</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:var(--text-primary);margin:0 0 14px;line-height:1.5;">
+            Hi David, I'm a scout for Wakiso Giants. I've been following your performances this season and would like to discuss a trial opportunity.
+          </p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn btn-outline-error btn-sm">Decline</button>
+            <button class="btn btn-primary btn-sm">Accept</button>
+          </div>
+        </div>
+
+        <!-- Request 2 -->
+        <div class="card card-padded">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div class="avatar avatar-md" style="background:rgba(139,92,246,0.15);color:#8b5cf6;">SM</div>
+            <div>
+              <div style="font-weight:600;font-size:14px;">Sarah Mulondo</div>
+              <div style="font-size:12px;color:var(--text-muted);">Wants to connect</div>
+            </div>
+          </div>
+          <p style="font-size:13px;color:var(--text-primary);margin:0 0 14px;line-height:1.5;">
+            We're hosting open trials for our women's football team next month. Your profile caught our attention.
+          </p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn btn-outline-error btn-sm">Decline</button>
+            <button class="btn btn-primary btn-sm">Accept</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">🔭</span>Discover</div>
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">🏟️</span>Opps</div>
+      <div class="bottom-nav-item"><span class="bottom-nav-icon">🔔</span>Alerts</div>
+      <div class="bottom-nav-item active"><span class="bottom-nav-icon">💬</span>Messages</div>
+    </div>
+  </div>
+
+  <!-- Conversations tab -->
+  <div class="screen-label-bar"><h2>Conversations tab</h2></div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar"><span class="app-bar-title">Messages</span></div>
+    <div class="phone-screen">
+      <div class="tab-bar">
+        <div class="tab-item">Requests</div>
+        <div class="tab-item active">Conversations</div>
+      </div>
+      <div class="screen-content" style="padding:12px;">
+
+        <div class="card" style="margin-bottom:8px;cursor:pointer;">
+          <div style="padding:14px;display:flex;align-items:center;gap:12px;">
+            <div class="avatar avatar-md" style="background:rgba(74,144,217,0.15);">RK</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:14px;">Robert Kato</div>
+              <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Great! Looking forward to meeting you at the trials.</div>
+            </div>
+            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">10:32</span>
+          </div>
+        </div>
+
+        <div class="card" style="cursor:pointer;">
+          <div style="padding:14px;display:flex;align-items:center;gap:12px;">
+            <div class="avatar avatar-md" style="background:rgba(139,92,246,0.15);color:#8b5cf6;">SM</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:14px;">Sarah Mulondo</div>
+              <div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Open conversation</div>
+            </div>
+            <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">Yesterday</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Conversation thread -->
+  <div class="screen-label-bar"><h2>Conversation Thread</h2></div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Robert Kato</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content" style="padding:16px;display:flex;flex-direction:column;justify-content:flex-end;min-height:500px;">
+        <div>
+          <div style="display:flex;justify-content:flex-start;"><div class="msg-bubble them">Hi David, I've been watching your highlights. Very impressive performances this season!<div class="msg-time">09:14</div></div></div>
+          <div style="display:flex;justify-content:flex-end;"><div class="msg-bubble me">Thank you Robert! I appreciate the kind words. What opportunities are you looking at?<div class="msg-time">09:17</div></div></div>
+          <div style="display:flex;justify-content:flex-start;"><div class="msg-bubble them">We're hosting trials for Wakiso Giants next month. Would you be interested in coming in?<div class="msg-time">09:20</div></div></div>
+          <div style="display:flex;justify-content:flex-end;"><div class="msg-bubble me">Absolutely, I'd love that. When exactly are the trials?<div class="msg-time">09:22</div></div></div>
+          <div style="display:flex;justify-content:flex-start;"><div class="msg-bubble them">March 15th at Lugogo stadium. 9am start. Let me know and I'll add you to the list.<div class="msg-time">10:30</div></div></div>
+          <div style="display:flex;justify-content:flex-end;"><div class="msg-bubble me">Great! Looking forward to meeting you at the trials.<div class="msg-time">10:32</div></div></div>
+        </div>
+      </div>
+      <!-- Input bar -->
+      <div style="padding:12px 16px;background:var(--bg-surface);border-top:1px solid var(--border-default);display:flex;gap:10px;align-items:center;flex-shrink:0;">
+        <input class="input-field-plain" style="flex:1;height:40px;border-radius:100px;" placeholder="Type a message…">
+        <button style="width:40px;height:40px;border-radius:50%;background:var(--accent-primary);border:none;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">➤</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

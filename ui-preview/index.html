@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — UI Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body { background: var(--bg-base); font-family: var(--font-sans); color: var(--text-primary); }
+    .index-header { text-align: center; padding: 48px 24px 32px; }
+    .index-header h1 { font-size: 2rem; font-weight: 700; margin: 0 0 8px; }
+    .index-header p { color: var(--text-muted); font-size: 1rem; margin: 0; }
+    .index-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; max-width: 1100px; margin: 0 auto; padding: 0 24px 64px; }
+    .screen-card { background: var(--bg-surface); border: 1px solid var(--border-default); border-radius: 16px; overflow: hidden; text-decoration: none; color: inherit; transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; }
+    .screen-card:hover { box-shadow: 0 8px 24px rgba(74,144,217,0.15); transform: translateY(-2px); }
+    .card-thumb { height: 160px; display: flex; align-items: center; justify-content: center; background: var(--bg-surface-alt); position: relative; }
+    .card-thumb-icon { font-size: 48px; opacity: 0.4; }
+    .card-thumb-tag { position: absolute; top: 12px; left: 12px; background: var(--accent-primary); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 100px; letter-spacing: 0.5px; }
+    .card-body { padding: 16px; flex: 1; }
+    .card-body h3 { font-size: 1rem; font-weight: 600; margin: 0 0 4px; }
+    .card-body p { font-size: 0.8rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
+    .divider-label { max-width: 1100px; margin: 24px auto 0; padding: 0 24px; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+    .badge-auth { background: var(--badge-coach); }
+    .badge-profile { background: var(--accent-primary); }
+    .badge-discover { background: #8b5cf6; }
+    .badge-messaging { background: #f59e0b; }
+    .badge-billing { background: var(--badge-self); }
+  </style>
+</head>
+<body>
+  <div class="index-header">
+    <h1>⚽ Play Smart</h1>
+    <p>UI screen previews — click any card to open the screen</p>
+  </div>
+
+  <div class="divider-label">Auth</div>
+  <div class="index-grid">
+    <a href="splash.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">⚽</span><span class="card-thumb-tag badge-auth">AUTH</span></div>
+      <div class="card-body"><h3>Splash Screen</h3><p>App entry point shown while session is being checked.</p></div>
+    </a>
+    <a href="landing.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🏠</span><span class="card-thumb-tag badge-auth">AUTH</span></div>
+      <div class="card-body"><h3>Landing / Home</h3><p>Public marketing entry point with sign-up CTAs and trust badge explanation.</p></div>
+    </a>
+    <a href="sign-up.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">📝</span><span class="card-thumb-tag badge-auth">AUTH</span></div>
+      <div class="card-body"><h3>Sign Up</h3><p>Account creation with role selector (Athlete / Recruiter / Club) and DOB gate.</p></div>
+    </a>
+    <a href="sign-in.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🔑</span><span class="card-thumb-tag badge-auth">AUTH</span></div>
+      <div class="card-body"><h3>Sign In</h3><p>Login screen for all account types.</p></div>
+    </a>
+    <a href="verification.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">✅</span><span class="card-thumb-tag badge-auth">AUTH</span></div>
+      <div class="card-body"><h3>Verification</h3><p>Credential / document submission for recruiter and club verification.</p></div>
+    </a>
+  </div>
+
+  <div class="divider-label">Profiles & Content</div>
+  <div class="index-grid">
+    <a href="athlete-setup.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🏃</span><span class="card-thumb-tag badge-profile">PROFILE</span></div>
+      <div class="card-body"><h3>Athlete Setup</h3><p>4-step onboarding: Basic Info → Attributes → Team & Location → Bio & Availability.</p></div>
+    </a>
+    <a href="athlete-profile.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">👤</span><span class="card-thumb-tag badge-profile">PROFILE</span></div>
+      <div class="card-body"><h3>Athlete Profile (Public)</h3><p>Full public profile as seen by recruiters, clubs, and guests.</p></div>
+    </a>
+    <a href="my-profile.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🪪</span><span class="card-thumb-tag badge-profile">PROFILE</span></div>
+      <div class="card-body"><h3>My Profile (Own View)</h3><p>Athlete's own profile with completeness indicator, edit controls, and content management.</p></div>
+    </a>
+    <a href="upload.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">📤</span><span class="card-thumb-tag badge-profile">PROFILE</span></div>
+      <div class="card-body"><h3>Upload Content</h3><p>Upload videos, photos, or posts with moment type tags.</p></div>
+    </a>
+  </div>
+
+  <div class="divider-label">Discovery & Search</div>
+  <div class="index-grid">
+    <a href="discover.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🔭</span><span class="card-thumb-tag" style="background:#8b5cf6">DISCOVER</span></div>
+      <div class="card-body"><h3>Discover Feed</h3><p>Main feed of athlete cards for all authenticated users.</p></div>
+    </a>
+    <a href="search.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🔍</span><span class="card-thumb-tag" style="background:#8b5cf6">DISCOVER</span></div>
+      <div class="card-body"><h3>Search Athletes</h3><p>Advanced search with filter sheet — recruiters and clubs only.</p></div>
+    </a>
+    <a href="shortlists.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">📋</span><span class="card-thumb-tag" style="background:#8b5cf6">DISCOVER</span></div>
+      <div class="card-body"><h3>Shortlists</h3><p>Manage named shortlist collections, private notes per athlete, export to PDF.</p></div>
+    </a>
+  </div>
+
+  <div class="divider-label">Engagement</div>
+  <div class="index-grid">
+    <a href="opportunities.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🏟️</span><span class="card-thumb-tag badge-messaging">ENGAGE</span></div>
+      <div class="card-body"><h3>Opportunities</h3><p>Browse and post trial / open day listings with capacity management.</p></div>
+    </a>
+    <a href="messages.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">💬</span><span class="card-thumb-tag badge-messaging">ENGAGE</span></div>
+      <div class="card-body"><h3>Messages</h3><p>Message requests (accept/decline) and conversation threads.</p></div>
+    </a>
+    <a href="notifications.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">🔔</span><span class="card-thumb-tag badge-messaging">ENGAGE</span></div>
+      <div class="card-body"><h3>Notifications</h3><p>All notification events — profile views, shortlists, trials, messages.</p></div>
+    </a>
+    <a href="billing.html" class="screen-card">
+      <div class="card-thumb"><span class="card-thumb-icon">💳</span><span class="card-thumb-tag badge-billing">BILLING</span></div>
+      <div class="card-body"><h3>Billing & Subscription</h3><p>Plan management, Post Boost purchase, and transaction history.</p></div>
+    </a>
+  </div>
+</body>
+</html>

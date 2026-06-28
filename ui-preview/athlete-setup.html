@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Play Smart — Athlete Setup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page-wrap" style="flex-direction:column; align-items:center;">
+  <div class="screen-label-bar">
+    <a href="index.html">← All screens</a>
+    <h2>Athlete Setup — Step 1 (active) · Steps 2–4 collapsed</h2>
+  </div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Complete Your Profile</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content">
+
+        <div class="stepper">
+          <!-- Step 1 — Active -->
+          <div class="step-header">
+            <div class="step-circle active">1</div>
+            <span class="step-label">Basic Info</span>
+          </div>
+          <div class="step-body">
+            <div class="input-group" style="margin-bottom:0;">
+              <div class="input-wrap">
+                <span class="input-icon">👤</span>
+                <input class="input-field" type="text" placeholder="Full Name" value="David Okello">
+              </div>
+            </div>
+            <div style="font-size:13px;font-weight:600;margin-top:4px;">Sport(s)</div>
+            <div class="chip-wrap">
+              <button class="choice-chip selected">Football</button>
+              <button class="choice-chip">Basketball</button>
+              <button class="choice-chip">Netball</button>
+              <button class="choice-chip">Athletics</button>
+              <button class="choice-chip">Rugby</button>
+              <button class="choice-chip">Swimming</button>
+              <button class="choice-chip">Boxing</button>
+              <button class="choice-chip">Volleyball</button>
+            </div>
+            <div style="font-size:13px;font-weight:600;">Position(s)</div>
+            <div class="chip-wrap">
+              <button class="choice-chip">Goalkeeper</button>
+              <button class="choice-chip">Defender</button>
+              <button class="choice-chip">Midfielder</button>
+              <button class="choice-chip selected">Striker</button>
+              <button class="choice-chip">Winger</button>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:4px;">
+              <button class="btn btn-primary btn-sm">Continue</button>
+            </div>
+          </div>
+
+          <div class="step-connector"></div>
+
+          <!-- Step 2 — Inactive -->
+          <div class="step-header">
+            <div class="step-circle inactive">2</div>
+            <span class="step-label" style="color:var(--text-muted);">Attributes</span>
+          </div>
+          <div class="step-body hidden"></div>
+
+          <div class="step-connector"></div>
+
+          <!-- Step 3 -->
+          <div class="step-header">
+            <div class="step-circle inactive">3</div>
+            <span class="step-label" style="color:var(--text-muted);">Team & Location</span>
+          </div>
+          <div class="step-body hidden"></div>
+
+          <div class="step-connector"></div>
+
+          <!-- Step 4 -->
+          <div class="step-header">
+            <div class="step-circle inactive">4</div>
+            <span class="step-label" style="color:var(--text-muted);">Bio & Availability</span>
+          </div>
+          <div class="step-body hidden"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 expanded variant -->
+  <div style="margin-top:24px;" class="screen-label-bar"><h2>Step 3 — Team & Location</h2></div>
+  <div class="phone-shell">
+    <div class="phone-notch"></div>
+    <div class="app-bar">
+      <button class="app-bar-back">←</button>
+      <span class="app-bar-title">Complete Your Profile</span>
+    </div>
+    <div class="phone-screen">
+      <div class="screen-content">
+        <div class="stepper">
+          <div class="step-header"><div class="step-circle done">✓</div><span class="step-label">Basic Info</span></div>
+          <div class="step-connector"></div>
+          <div class="step-header"><div class="step-circle done">✓</div><span class="step-label">Attributes</span></div>
+          <div class="step-connector"></div>
+          <div class="step-header"><div class="step-circle active">3</div><span class="step-label">Team & Location</span></div>
+          <div class="step-body">
+            <div class="input-wrap"><span class="input-icon">👥</span><input class="input-field" placeholder="Current Team / Academy" value="Kampala City FC"></div>
+            <div style="font-size:13px;font-weight:600;">Country</div>
+            <div class="input-wrap">
+              <span class="input-icon">🌍</span>
+              <select class="input-field" style="appearance:none;"><option selected>Uganda</option><option>Kenya</option><option>Tanzania</option></select>
+            </div>
+            <div class="input-wrap"><span class="input-icon">🏙️</span><input class="input-field" placeholder="City" value="Kampala"></div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-primary btn-sm">Continue</button>
+              <button class="btn btn-ghost btn-sm">Back</button>
+            </div>
+          </div>
+          <div class="step-connector"></div>
+          <div class="step-header"><div class="step-circle inactive">4</div><span class="step-label" style="color:var(--text-muted);">Bio & Availability</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
