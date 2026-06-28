@@ -51,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Play Smart',
+              'PlaySmart',
               style: theme.textTheme.displayMedium,
             ),
             const SizedBox(height: 32),
