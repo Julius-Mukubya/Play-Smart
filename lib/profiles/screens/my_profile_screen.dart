@@ -36,7 +36,8 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => _showSettingsSheet(context),
+            tooltip: 'Edit profile',
+            onPressed: () => context.push(AppRouter.athleteSetup),
           ),
         ],
       ),
@@ -53,9 +54,36 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     );
   }
 
-  void _showSettingsSheet(BuildContext context) {
+  Widget _buildSignOutButton(BuildContext context, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => _confirmSignOut(context),
+          icon: Icon(Icons.logout, color: theme.colorScheme.error),
+          label: Text('Sign Out', style: TextStyle(color: theme.colorScheme.error)),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: theme.colorScheme.error),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSwitchAccountSheet(BuildContext context) async {
     final authState = ref.read(authProvider);
-    final user = authState is AuthAuthenticated ? authState.user : null;
+    final currentEmail = authState is AuthAuthenticated ? authState.user.email : null;
+    final accounts = await ref.read(knownAccountsStoreProvider).getAll();
+
+    if (!context.mounted) return;
+
+    Future<void> switchTo(BuildContext sheetContext, String? email) async {
+      Navigator.pop(sheetContext);
+      await ref.read(authProvider.notifier).signOut();
+      if (context.mounted) context.go(AppRouter.signIn, extra: email);
+    }
 
     showModalBottomSheet(
       context: context,
@@ -70,7 +98,6 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Handle bar
               Container(
                 width: 40,
                 height: 4,
@@ -80,137 +107,48 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-
-              // User info header
-              if (user != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        child: Text(
-                          user.name.isNotEmpty
-                              ? user.name[0].toUpperCase()
-                              : '?',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(user.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium),
-                            Text(user.email,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall),
-                          ],
-                        ),
-                      ),
-                      // Role chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          user.role.name[0].toUpperCase() +
-                              user.role.name.substring(1),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Switch Account',
+                      style: Theme.of(ctx).textTheme.titleLarge),
                 ),
-
-              const Divider(),
-
-              // Settings items
-              _SettingsTile(
-                icon: Icons.person_outline,
-                label: 'Edit Profile',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.go(AppRouter.athleteSetup);
-                },
               ),
-              _SettingsTile(
-                icon: Icons.credit_card_outlined,
-                label: 'Billing & Subscription',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.billing);
-                },
+              const SizedBox(height: 8),
+              if (accounts.isNotEmpty) const Divider(height: 1),
+              ...accounts.map((account) {
+                final isCurrent = account.email == currentEmail;
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor:
+                        Theme.of(ctx).colorScheme.primaryContainer,
+                    child: Text(
+                      account.name.isNotEmpty
+                          ? account.name[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(ctx).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                  title: Text(account.name),
+                  subtitle:
+                      Text('${account.email} · ${account.role.name.capitalize()}'),
+                  trailing: isCurrent
+                      ? Icon(Icons.check_circle,
+                          color: Theme.of(ctx).colorScheme.primary)
+                      : null,
+                  onTap: isCurrent ? null : () => switchTo(ctx, account.email),
+                );
+              }),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_outlined),
+                title: const Text('Add Another Account'),
+                onTap: () => switchTo(ctx, null),
               ),
-              _SettingsTile(
-                icon: Icons.bookmark_outline,
-                label: 'My Shortlists',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.shortlists);
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.notifications_outlined,
-                label: 'Notifications',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.notifications);
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.shield_outlined,
-                label: 'Privacy & Safety',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.privacy);
-                },
-              ),
-              _SettingsTile(
-                icon: Icons.help_outline,
-                label: 'Help & Support',
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.helpSupport);
-                },
-              ),
-
-              const Divider(),
-
-              // Sign out
-              _SettingsTile(
-                icon: Icons.logout,
-                label: 'Sign Out',
-                color: Theme.of(context).colorScheme.error,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _confirmSignOut(context);
-                },
-              ),
-
               const SizedBox(height: 8),
             ],
           ),
@@ -364,7 +302,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => context.go(AppRouter.athleteSetup),
+                    onPressed: () => context.push(AppRouter.athleteSetup),
                     child: const Text('Get Started'),
                   ),
                 ),
@@ -406,6 +344,50 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
             theme: theme,
           ),
 
+          const SizedBox(height: 16),
+
+          // ── More section ────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Text('More',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                )),
+          ),
+          _ActionTile(
+            icon: Icons.bookmark_outline,
+            label: 'My Shortlists',
+            onTap: () => context.push(AppRouter.shortlists),
+          ),
+          _ActionTile(
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+            onTap: () => context.push(AppRouter.notifications),
+          ),
+          _ActionTile(
+            icon: Icons.credit_card_outlined,
+            label: 'Billing & Subscription',
+            onTap: () => context.push(AppRouter.billing),
+          ),
+          _ActionTile(
+            icon: Icons.shield_outlined,
+            label: 'Privacy & Safety',
+            onTap: () => context.push(AppRouter.privacy),
+          ),
+          _ActionTile(
+            icon: Icons.help_outline,
+            label: 'Help & Support',
+            onTap: () => context.push(AppRouter.helpSupport),
+          ),
+          _ActionTile(
+            icon: Icons.switch_account_outlined,
+            label: 'Switch Account',
+            onTap: () => _showSwitchAccountSheet(context),
+          ),
+
+          const SizedBox(height: 24),
+          _buildSignOutButton(context, theme),
           const SizedBox(height: 32),
         ],
       ),
@@ -448,7 +430,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => context.go(AppRouter.athleteSetup),
+                    onPressed: () => context.push(AppRouter.athleteSetup),
                     child: const Text('Complete'),
                   ),
                 ],
@@ -488,7 +470,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () => context.go(AppRouter.athleteSetup),
+                  onPressed: () => context.push(AppRouter.athleteSetup),
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('Edit'),
                 ),
@@ -640,6 +622,52 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
               ],
             ),
           ),
+
+          const Divider(height: 1),
+
+          // ── More section ────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text('More',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                )),
+          ),
+          _ActionTile(
+            icon: Icons.bookmark_outline,
+            label: 'My Shortlists',
+            onTap: () => context.push(AppRouter.shortlists),
+          ),
+          _ActionTile(
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+            onTap: () => context.push(AppRouter.notifications),
+          ),
+          _ActionTile(
+            icon: Icons.credit_card_outlined,
+            label: 'Billing & Subscription',
+            onTap: () => context.push(AppRouter.billing),
+          ),
+          _ActionTile(
+            icon: Icons.shield_outlined,
+            label: 'Privacy & Safety',
+            onTap: () => context.push(AppRouter.privacy),
+          ),
+          _ActionTile(
+            icon: Icons.help_outline,
+            label: 'Help & Support',
+            onTap: () => context.push(AppRouter.helpSupport),
+          ),
+          _ActionTile(
+            icon: Icons.switch_account_outlined,
+            label: 'Switch Account',
+            onTap: () => _showSwitchAccountSheet(context),
+          ),
+
+          const SizedBox(height: 24),
+          _buildSignOutButton(context, theme),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -759,39 +787,45 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   }
 }
 
-/// Reusable list tile for the settings bottom sheet.
-class _SettingsTile extends StatelessWidget {
+/// Tappable navigation row used for quick links on the profile page.
+class _ActionTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Color? color;
 
-  const _SettingsTile({
+  const _ActionTile({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? Theme.of(context).colorScheme.onSurface;
-    return ListTile(
-      leading: Icon(icon, color: effectiveColor, size: 22),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: effectiveColor,
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 1),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.bgSurface,
+          border: Border(
+            bottom: BorderSide(color: AppColors.borderDefault, width: 0.5),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: AppColors.textMuted),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(label,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500)),
+            ),
+            Icon(Icons.chevron_right, size: 20, color: theme.colorScheme.outline),
+          ],
         ),
       ),
-      trailing: color == null
-          ? Icon(Icons.chevron_right,
-              color: Theme.of(context).colorScheme.outline, size: 20)
-          : null,
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );
   }
 }

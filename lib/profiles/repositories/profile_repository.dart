@@ -1,159 +1,126 @@
+import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/utils/mock_data.dart';
 
-/// Profile repository — handles athlete profile CRUD operations.
-/// Currently uses mock data; swap with real API calls when backend is connected.
+/// Profile repository — Supabase-backed CRUD for `public.athletes`.
+///
+/// `profile_badge_level` and `profile_completeness` are never sent in
+/// insert/update payloads — they're recomputed server-side by triggers on
+/// every write (see `context/supabase-backend.md` section 8). `lat`/`lng` are
+/// geocoded server-side and likewise read-only from the client.
 class ProfileRepository {
-  final List<Athlete> _athletes = List.from(MockData.athletes);
+  static const _table = 'athletes';
+  // Embeds achievements + content in the same query so screens that show a
+  // full profile don't need a second round trip.
+  static const _selectWithRelations = '*, achievements(*), athlete_content(*)';
 
-  /// Get all athletes (for discovery/search).
-  List<Athlete> getAllAthletes() => List.unmodifiable(_athletes);
-
-  /// Get athlete profile by profile ID.
-  Athlete? getAthleteById(String id) {
-    try {
-      return _athletes.firstWhere((a) => a.id == id);
-    } catch (_) {
-      return null;
-    }
+  Future<List<Athlete>> getAllAthletes() async {
+    final rows = await supabase.from(_table).select(_selectWithRelations);
+    return (rows as List).map((r) => Athlete.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Get athlete profile by user ID.
-  Athlete? getAthleteByUserId(String userId) {
-    try {
-      return _athletes.firstWhere((a) => a.userId == userId);
-    } catch (_) {
-      return null;
-    }
+  Future<Athlete?> getAthleteById(String id) async {
+    final row =
+        await supabase.from(_table).select(_selectWithRelations).eq('id', id).maybeSingle();
+    return row != null ? Athlete.fromJson(row) : null;
   }
 
-  /// Create a new athlete profile.
+  Future<Athlete?> getAthleteByUserId(String userId) async {
+    final row = await supabase
+        .from(_table)
+        .select(_selectWithRelations)
+        .eq('user_id', userId)
+        .maybeSingle();
+    return row != null ? Athlete.fromJson(row) : null;
+  }
+
+  /// Create a new athlete profile for the current user.
   Future<Athlete> createProfile(Athlete profile) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _athletes.add(profile);
-    return profile;
+    try {
+      final row = await supabase
+          .from(_table)
+          .insert(_writableFields(profile))
+          .select(_selectWithRelations)
+          .single();
+      return Athlete.fromJson(row);
+    } catch (e) {
+      throw ProfileException('Could not create profile: ${e.toString()}');
+    }
   }
 
   /// Update an existing athlete profile.
   Future<Athlete> updateProfile(Athlete updated) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final index = _athletes.indexWhere((a) => a.id == updated.id);
-    if (index >= 0) {
-      _athletes[index] = updated;
-      return updated;
+    try {
+      final row = await supabase
+          .from(_table)
+          .update(_writableFields(updated))
+          .eq('id', updated.id)
+          .select(_selectWithRelations)
+          .single();
+      return Athlete.fromJson(row);
+    } catch (e) {
+      throw ProfileException('Profile not found.');
     }
-    throw ProfileException('Profile not found.');
   }
 
-  /// Calculate profile completeness (0.0 to 1.0).
+  /// Client-side estimate of profile completeness, useful for live form
+  /// feedback before saving. The authoritative value is recalculated
+  /// server-side on every write — always prefer `Athlete.profileCompleteness`
+  /// from a freshly-loaded profile over this for display after save.
   double calculateCompleteness(Athlete profile) {
     int filled = 0;
     int total = 0;
 
     if (profile.displayName.isNotEmpty) filled++;
     total++;
-
     if (profile.sports.isNotEmpty) filled++;
     total++;
-
     if (profile.positions.isNotEmpty) filled++;
     total++;
-
     if (profile.age != null) filled++;
     total++;
-
     if (profile.height != null) filled++;
     total++;
-
     if (profile.weight != null) filled++;
     total++;
-
     if (profile.dominantFootHand != null && profile.dominantFootHand!.isNotEmpty) filled++;
     total++;
-
     if (profile.currentTeam != null && profile.currentTeam!.isNotEmpty) filled++;
     total++;
-
     if (profile.country != null && profile.country!.isNotEmpty) filled++;
     total++;
-
     if (profile.bio != null && profile.bio!.isNotEmpty) filled++;
     total++;
-
     if (profile.photoUrl != null) filled++;
     total++;
 
     return total > 0 ? filled / total : 0.0;
   }
 
-  /// Add an achievement to an athlete.
+  /// Add an achievement. `badge_level` is never sent — it always starts at
+  /// `self_reported` server-side (invariant: badges are never self-assigned).
   Future<Athlete> addAchievement(String athleteId, Achievement achievement) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _athletes.indexWhere((a) => a.id == athleteId);
-    if (index < 0) throw ProfileException('Profile not found.');
-    final athlete = _athletes[index];
-    final updatedAchievements = [...athlete.achievements, achievement];
-    final updatedAthlete = Athlete(
-      id: athlete.id,
-      userId: athlete.userId,
-      displayName: athlete.displayName,
-      photoUrl: athlete.photoUrl,
-      sports: athlete.sports,
-      positions: athlete.positions,
-      age: athlete.age,
-      height: athlete.height,
-      weight: athlete.weight,
-      dominantFootHand: athlete.dominantFootHand,
-      currentTeam: athlete.currentTeam,
-      country: athlete.country,
-      city: athlete.city,
-      bio: athlete.bio,
-      availabilityStatus: athlete.availabilityStatus,
-      achievements: updatedAchievements,
-      content: athlete.content,
-      profileBadgeLevel: athlete.profileBadgeLevel,
-      profileCompleteness: athlete.profileCompleteness,
-      createdAt: athlete.createdAt,
-    );
-    _athletes[index] = updatedAthlete;
-    return updatedAthlete;
+    await supabase.from('achievements').insert({
+      'athlete_id': athleteId,
+      'title': achievement.title,
+      'description': achievement.description,
+    });
+    final athlete = await getAthleteById(athleteId);
+    if (athlete == null) throw ProfileException('Profile not found.');
+    return athlete;
   }
 
-  /// Remove an achievement from an athlete.
   Future<Athlete> removeAchievement(String athleteId, String achievementId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _athletes.indexWhere((a) => a.id == athleteId);
-    if (index < 0) throw ProfileException('Profile not found.');
-    final athlete = _athletes[index];
-    final updatedAchievements = athlete.achievements.where((a) => a.id != achievementId).toList();
-    final updatedAthlete = Athlete(
-      id: athlete.id,
-      userId: athlete.userId,
-      displayName: athlete.displayName,
-      photoUrl: athlete.photoUrl,
-      sports: athlete.sports,
-      positions: athlete.positions,
-      age: athlete.age,
-      height: athlete.height,
-      weight: athlete.weight,
-      dominantFootHand: athlete.dominantFootHand,
-      currentTeam: athlete.currentTeam,
-      country: athlete.country,
-      city: athlete.city,
-      bio: athlete.bio,
-      availabilityStatus: athlete.availabilityStatus,
-      achievements: updatedAchievements,
-      content: athlete.content,
-      profileBadgeLevel: athlete.profileBadgeLevel,
-      profileCompleteness: athlete.profileCompleteness,
-      createdAt: athlete.createdAt,
-    );
-    _athletes[index] = updatedAthlete;
-    return updatedAthlete;
+    await supabase.from('achievements').delete().eq('id', achievementId);
+    final athlete = await getAthleteById(athleteId);
+    if (athlete == null) throw ProfileException('Profile not found.');
+    return athlete;
   }
 
-  /// Filter athletes by search criteria.
-  List<Athlete> searchAthletes({
+  /// Filter athletes by search criteria. `sport`/`position` match against the
+  /// exact values used in the athlete setup form (array containment) —
+  /// free-text fuzzy search across sport/position isn't supported server-side,
+  /// only on `displayName` in `DiscoveryRepository.searchAthletes`.
+  Future<List<Athlete>> searchAthletes({
     String? sport,
     String? position,
     int? minAge,
@@ -161,17 +128,41 @@ class ProfileRepository {
     String? location,
     AvailabilityStatus? availability,
     TrustBadgeLevel? minBadge,
-  }) {
-    return MockData.searchAthletes(
-      sport: sport,
-      position: position,
-      maxAge: maxAge,
-      minAge: minAge,
-      location: location,
-      availability: availability,
-      minBadge: minBadge,
-    );
+  }) async {
+    var query = supabase.from(_table).select(_selectWithRelations);
+    if (sport != null && sport.isNotEmpty) query = query.contains('sports', [sport]);
+    if (position != null && position.isNotEmpty) query = query.contains('positions', [position]);
+    if (minAge != null) query = query.gte('age', minAge);
+    if (maxAge != null) query = query.lte('age', maxAge);
+    if (location != null && location.isNotEmpty) {
+      query = query.or('city.ilike.%$location%,country.ilike.%$location%');
+    }
+    if (availability != null) query = query.eq('availability_status', availability.toDb());
+    if (minBadge != null) {
+      // trust_badge_level's declared enum order matches TrustBadgeLevel's,
+      // so a plain text >= comparison ranks it correctly in Postgres.
+      query = query.gte('profile_badge_level', minBadge.toDb());
+    }
+    final rows = await query;
+    return (rows as List).map((r) => Athlete.fromJson(r as Map<String, dynamic>)).toList();
   }
+
+  Map<String, dynamic> _writableFields(Athlete a) => {
+        'user_id': a.userId,
+        'display_name': a.displayName,
+        'photo_url': a.photoUrl,
+        'sports': a.sports,
+        'positions': a.positions,
+        'age': a.age,
+        'height': a.height,
+        'weight': a.weight,
+        'dominant_foot_hand': a.dominantFootHand,
+        'current_team': a.currentTeam,
+        'country': a.country,
+        'city': a.city,
+        'bio': a.bio,
+        'availability_status': a.availabilityStatus.toDb(),
+      };
 }
 
 /// Exception thrown by profile operations.

@@ -121,8 +121,8 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
   Future<void> loadDiscoverFeed() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final athletes = _repository.getDiscoverFeed();
-      final feedItems = _repository.getContentFeed();
+      final athletes = await _repository.getDiscoverFeed();
+      final feedItems = await _repository.getContentFeed();
       state = state.copyWith(
         athletes: athletes,
         feedItems: feedItems,
@@ -151,7 +151,7 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
   Future<void> search() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final results = _repository.searchAthletes(
+      final results = await _repository.searchAthletes(
         query: state.filters.query,
         sport: state.filters.sport,
         position: state.filters.position,

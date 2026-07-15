@@ -1,13 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/profiles/repositories/content_repository.dart';
+import 'package:play_smart/profiles/repositories/content_repository.dart' show ContentException;
+import 'package:play_smart/profiles/repositories/mock_content_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
+// Exercises content CRUD against the in-memory mock — the real
+// `ContentRepository` talks to Supabase. See lib/supabase-integration.md.
 void main() {
   group('ContentRepository', () {
-    late ContentRepository repository;
+    late MockContentRepository repository;
 
     setUp(() {
-      repository = ContentRepository();
+      repository = MockContentRepository();
     });
 
     test('getContentByAthleteId returns content for existing athlete', () {

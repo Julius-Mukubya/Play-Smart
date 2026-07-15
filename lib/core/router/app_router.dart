@@ -65,7 +65,10 @@ class AppRouter {
       GoRoute(path: splash, builder: (_, __) => const SplashScreen()),
       GoRoute(path: landing, builder: (_, __) => const LandingScreen()),
       GoRoute(path: signUp, builder: (_, __) => const SignUpScreen()),
-      GoRoute(path: signIn, builder: (_, __) => const SignInScreen()),
+      GoRoute(
+        path: signIn,
+        builder: (_, state) => SignInScreen(prefillEmail: state.extra as String?),
+      ),
 
       // ── Onboarding (outside shell) ──────────────────────────────────────
       GoRoute(path: athleteSetup, builder: (_, __) => const AthleteSetupScreen()),

@@ -1,133 +1,99 @@
+import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/utils/mock_data.dart';
 
-/// Shortlist repository — handles recruiter/club shortlist CRUD operations.
-/// Uses mock data; swap with real API calls when backend is connected.
+/// Shortlist repository — Supabase-backed CRUD for `public.shortlists` +
+/// `public.shortlist_athletes` (the normalized form of the Dart model's
+/// `athleteIds`/`privateNotes` map). Private notes are owner-only by RLS —
+/// an athlete can never read a recruiter's note about them.
 class ShortlistRepository {
-  final List<Shortlist> _shortlists = List.from(MockData.shortlists);
+  static const _table = 'shortlists';
+  static const _athletesTable = 'shortlist_athletes';
+  static const _selectWithAthletes = '*, shortlist_athletes(athlete_id, private_note)';
 
-  /// Get all shortlists for a given owner.
-  List<Shortlist> getShortlistsByOwner(String ownerId) {
-    return _shortlists.where((s) => s.ownerId == ownerId).toList();
+  Future<List<Shortlist>> getShortlistsByOwner(String ownerId) async {
+    final rows =
+        await supabase.from(_table).select(_selectWithAthletes).eq('owner_id', ownerId);
+    return (rows as List).map((r) => Shortlist.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Get a specific shortlist by ID.
-  Shortlist? getShortlistById(String id) {
-    try {
-      return _shortlists.firstWhere((s) => s.id == id);
-    } catch (_) {
-      return null;
-    }
+  Future<Shortlist?> getShortlistById(String id) async {
+    final row =
+        await supabase.from(_table).select(_selectWithAthletes).eq('id', id).maybeSingle();
+    return row != null ? Shortlist.fromJson(row) : null;
   }
 
-  /// Create a new shortlist.
   Future<Shortlist> createShortlist(String ownerId, String name) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final newList = Shortlist(
-      id: 'shortlist-${DateTime.now().millisecondsSinceEpoch}',
-      ownerId: ownerId,
-      name: name,
-    );
-    _shortlists.add(newList);
-    return newList;
+    final row = await supabase
+        .from(_table)
+        .insert({'owner_id': ownerId, 'name': name})
+        .select(_selectWithAthletes)
+        .single();
+    return Shortlist.fromJson(row);
   }
 
-  /// Rename a shortlist.
   Future<Shortlist> renameShortlist(String id, String newName) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _shortlists.indexWhere((s) => s.id == id);
-    if (index < 0) throw ShortlistException('Shortlist not found.');
-    final existing = _shortlists[index];
-    final updated = Shortlist(
-      id: existing.id,
-      ownerId: existing.ownerId,
-      name: newName,
-      athleteIds: existing.athleteIds,
-      privateNotes: existing.privateNotes,
-      createdAt: existing.createdAt,
-    );
-    _shortlists[index] = updated;
-    return updated;
-  }
-
-  /// Delete a shortlist.
-  Future<void> deleteShortlist(String id) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _shortlists.removeWhere((s) => s.id == id);
-  }
-
-  /// Add an athlete to a shortlist.
-  Future<Shortlist> addAthlete(String shortlistId, String athleteId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _shortlists.indexWhere((s) => s.id == shortlistId);
-    if (index < 0) throw ShortlistException('Shortlist not found.');
-    final list = _shortlists[index];
-    if (list.athleteIds.contains(athleteId)) return list;
-    final updated = Shortlist(
-      id: list.id,
-      ownerId: list.ownerId,
-      name: list.name,
-      athleteIds: [...list.athleteIds, athleteId],
-      privateNotes: list.privateNotes,
-      createdAt: list.createdAt,
-    );
-    _shortlists[index] = updated;
-    return updated;
-  }
-
-  /// Remove an athlete from a shortlist.
-  Future<Shortlist> removeAthlete(String shortlistId, String athleteId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _shortlists.indexWhere((s) => s.id == shortlistId);
-    if (index < 0) throw ShortlistException('Shortlist not found.');
-    final list = _shortlists[index];
-    final updated = Shortlist(
-      id: list.id,
-      ownerId: list.ownerId,
-      name: list.name,
-      athleteIds: list.athleteIds.where((id) => id != athleteId).toList(),
-      privateNotes: {...list.privateNotes}..remove(athleteId),
-      createdAt: list.createdAt,
-    );
-    _shortlists[index] = updated;
-    return updated;
-  }
-
-  /// Set private note on an athlete in a shortlist.
-  Future<Shortlist> setPrivateNote(
-      String shortlistId, String athleteId, String note) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _shortlists.indexWhere((s) => s.id == shortlistId);
-    if (index < 0) throw ShortlistException('Shortlist not found.');
-    final list = _shortlists[index];
-    final updatedNotes = Map<String, String>.from(list.privateNotes);
-    if (note.isNotEmpty) {
-      updatedNotes[athleteId] = note;
-    } else {
-      updatedNotes.remove(athleteId);
+    try {
+      await supabase.from(_table).update({'name': newName}).eq('id', id);
+      final updated = await getShortlistById(id);
+      if (updated == null) throw ShortlistException('Shortlist not found.');
+      return updated;
+    } catch (e) {
+      throw ShortlistException('Shortlist not found.');
     }
-    final updated = Shortlist(
-      id: list.id,
-      ownerId: list.ownerId,
-      name: list.name,
-      athleteIds: list.athleteIds,
-      privateNotes: updatedNotes,
-      createdAt: list.createdAt,
+  }
+
+  Future<void> deleteShortlist(String id) async {
+    await supabase.from(_table).delete().eq('id', id);
+  }
+
+  Future<Shortlist> addAthlete(String shortlistId, String athleteId) async {
+    // upsert so re-adding an already-shortlisted athlete is a no-op, matching
+    // the mock's idempotent behavior.
+    await supabase.from(_athletesTable).upsert(
+      {'shortlist_id': shortlistId, 'athlete_id': athleteId},
+      onConflict: 'shortlist_id,athlete_id',
+      ignoreDuplicates: true,
     );
-    _shortlists[index] = updated;
+    final updated = await getShortlistById(shortlistId);
+    if (updated == null) throw ShortlistException('Shortlist not found.');
     return updated;
   }
 
-  /// Get the count of shortlists for an owner (for tier limit checks).
-  int getShortlistCount(String ownerId) {
-    return _shortlists.where((s) => s.ownerId == ownerId).length;
+  Future<Shortlist> removeAthlete(String shortlistId, String athleteId) async {
+    await supabase
+        .from(_athletesTable)
+        .delete()
+        .eq('shortlist_id', shortlistId)
+        .eq('athlete_id', athleteId);
+    final updated = await getShortlistById(shortlistId);
+    if (updated == null) throw ShortlistException('Shortlist not found.');
+    return updated;
   }
 
-  /// Get total athletes across all shortlists for an owner.
-  int getTotalShortlistedAthletes(String ownerId) {
-    return _shortlists
-        .where((s) => s.ownerId == ownerId)
-        .fold(0, (sum, s) => sum + s.athleteIds.length);
+  Future<Shortlist> setPrivateNote(String shortlistId, String athleteId, String note) async {
+    await supabase.from(_athletesTable).upsert(
+      {
+        'shortlist_id': shortlistId,
+        'athlete_id': athleteId,
+        'private_note': note.isNotEmpty ? note : null,
+      },
+      onConflict: 'shortlist_id,athlete_id',
+    );
+    final updated = await getShortlistById(shortlistId);
+    if (updated == null) throw ShortlistException('Shortlist not found.');
+    return updated;
+  }
+
+  Future<int> getShortlistCount(String ownerId) async {
+    final rows = await supabase.from(_table).select('id').eq('owner_id', ownerId);
+    return (rows as List).length;
+  }
+
+  /// Total athletes across all of this owner's shortlists (duplicates across
+  /// lists counted once per list, matching the mock's behavior).
+  Future<int> getTotalShortlistedAthletes(String ownerId) async {
+    final lists = await getShortlistsByOwner(ownerId);
+    return lists.fold<int>(0, (sum, s) => sum + s.athleteIds.length);
   }
 }
 

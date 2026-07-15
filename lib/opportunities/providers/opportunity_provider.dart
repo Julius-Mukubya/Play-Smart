@@ -59,7 +59,7 @@ class OpportunityNotifier extends Notifier<OpportunityState> {
   Future<void> loadOpenOpportunities() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final list = _repo.getOpenOpportunities();
+      final list = await _repo.getOpenOpportunities();
       state = state.copyWith(opportunities: list, isLoading: false);
     } catch (e, st) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -71,7 +71,7 @@ class OpportunityNotifier extends Notifier<OpportunityState> {
     if (uid == null) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final list = _repo.getOpportunitiesByCreator(uid);
+      final list = await _repo.getOpportunitiesByCreator(uid);
       state = state.copyWith(myPostings: list, isLoading: false);
     } catch (e, st) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -102,7 +102,7 @@ class OpportunityNotifier extends Notifier<OpportunityState> {
   Future<void> loadApplications(String opportunityId) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final list = _repo.getApplicationsForOpportunity(opportunityId);
+      final list = await _repo.getApplicationsForOpportunity(opportunityId);
       state = state.copyWith(applications: list, isLoading: false);
     } catch (e, st) {
       state = state.copyWith(isLoading: false, error: e.toString());

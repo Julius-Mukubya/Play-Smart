@@ -1,13 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/shortlisting/repositories/shortlist_repository.dart';
-import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:play_smart/shortlisting/repositories/mock_shortlist_repository.dart';
+import 'package:play_smart/shortlisting/repositories/shortlist_repository.dart' show ShortlistException;
 
+// Exercises shortlist CRUD/notes logic against the in-memory mock — the real
+// `ShortlistRepository` talks to Supabase. See lib/supabase-integration.md.
 void main() {
   group('ShortlistRepository', () {
-    late ShortlistRepository repository;
+    late MockShortlistRepository repository;
 
     setUp(() {
-      repository = ShortlistRepository();
+      repository = MockShortlistRepository();
     });
 
     test('getShortlistsByOwner returns lists for owner', () {

@@ -24,7 +24,7 @@ class ProfileNotifier extends Notifier<AsyncValue<Athlete?>> {
     try {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
-        final profile = _repository.getAthleteByUserId(authState.user.id);
+        final profile = await _repository.getAthleteByUserId(authState.user.id);
         state = AsyncValue.data(profile);
       } else {
         state = const AsyncValue.data(null);
@@ -38,10 +38,21 @@ class ProfileNotifier extends Notifier<AsyncValue<Athlete?>> {
   Future<void> loadAthleteProfile(String athleteId) async {
     state = const AsyncValue.loading();
     try {
-      final profile = _repository.getAthleteById(athleteId);
+      final profile = await _repository.getAthleteById(athleteId);
       state = AsyncValue.data(profile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Create the current user's athlete profile (initial onboarding).
+  Future<String?> createProfile(Athlete profile) async {
+    try {
+      final result = await _repository.createProfile(profile);
+      state = AsyncValue.data(result);
+      return null;
+    } catch (e) {
+      return e.toString();
     }
   }
 

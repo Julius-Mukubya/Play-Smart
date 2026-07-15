@@ -1,4 +1,4 @@
-package com.elitescout.elite_scout
+package com.elitescout.play_smart
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,13 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/opportunities/repositories/opportunity_repository.dart';
+import 'package:play_smart/opportunities/repositories/mock_opportunity_repository.dart';
+import 'package:play_smart/opportunities/repositories/opportunity_repository.dart' show OpportunityException;
 import 'package:play_smart/shared/types/domain_types.dart';
 
+// Exercises capacity/auto-close/duplicate-blocking logic against the
+// in-memory mock — the real `OpportunityRepository` calls the
+// `apply_to_opportunity` RPC. See lib/supabase-integration.md.
 void main() {
   group('OpportunityRepository', () {
-    late OpportunityRepository repository;
+    late MockOpportunityRepository repository;
 
     setUp(() {
-      repository = OpportunityRepository();
+      repository = MockOpportunityRepository();
     });
 
     test('getOpenOpportunities returns only open', () {

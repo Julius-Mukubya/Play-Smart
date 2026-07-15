@@ -1,15 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/repositories/auth_repository.dart';
+import 'package:play_smart/auth/repositories/mock_auth_repository.dart';
 import 'package:play_smart/auth/services/auth_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 void main() {
+  // These tests exercise auth business rules (duplicate email, password
+  // length, under-18 detection, verification defaults) against the in-memory
+  // mock — the real `AuthRepository` talks to Supabase and is not unit-tested
+  // here. See lib/supabase-integration.md for how to verify it against a live
+  // project.
   group('AuthRepository', () {
-    late AuthRepository repository;
+    late MockAuthRepository repository;
 
     setUp(() {
-      repository = AuthRepository();
+      repository = MockAuthRepository();
     });
 
     test('signUp creates a new user', () async {

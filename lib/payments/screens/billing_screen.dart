@@ -10,24 +10,86 @@ final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
 });
 
 /// Billing and subscription management screen.
-class BillingScreen extends ConsumerWidget {
+///
+/// Plans and transaction history are read from Supabase. Subscribing and
+/// purchasing a Post Boost are not wired to a real payment flow yet — there
+/// is no deployed payment-provider webhook to create the transaction/
+/// subscription rows (see `lib/supabase-integration.md` section 7), so those
+/// actions surface a "coming soon" message instead of pretending to succeed.
+class BillingScreen extends ConsumerStatefulWidget {
   const BillingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BillingScreen> createState() => _BillingScreenState();
+}
+
+class _BillingScreenState extends ConsumerState<BillingScreen> {
+  List<SubscriptionPlan> _plans = [];
+  List<PaymentTransaction> _transactions = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final auth = ref.read(authProvider);
+    if (auth is! AuthAuthenticated) {
+      setState(() => _isLoading = false);
+      return;
+    }
+    final repo = ref.read(paymentRepositoryProvider);
+    try {
+      final plans = await repo.getPlans(forRole: auth.user.role);
+      final transactions = await repo.getTransactionHistory(auth.user.id);
+      if (!mounted) return;
+      setState(() {
+        _plans = plans;
+        _transactions = transactions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showComingSoon(String action) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$action isn\'t available yet — payment provider integration is in progress.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final auth = ref.watch(authProvider);
-    final repo = ref.read(paymentRepositoryProvider);
-    final txRepo = ref.read(paymentRepositoryProvider);
 
     if (auth is! AuthAuthenticated) {
-      return Scaffold(appBar: AppBar(title: const Text('Billing')),
-        body: Center(child: Text('Please sign in to manage billing.', style: theme.textTheme.bodyMedium)));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Billing')),
+        body: Center(child: Text('Please sign in to manage billing.', style: theme.textTheme.bodyMedium)),
+      );
+    }
+
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Billing & Subscription')),
+        body: Center(child: Text('Could not load billing info: $_error')),
+      );
     }
 
     final user = auth.user;
-    final plans = repo.getPlans(forRole: user.role);
-    final transactions = txRepo.getTransactionHistory(user.id);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Billing & Subscription')),
@@ -60,7 +122,7 @@ class BillingScreen extends ConsumerWidget {
           // Available plans
           Text('Available Plans', style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
-          ...plans.where((p) => p.tier != SubscriptionTier.free).map((plan) => Card(
+          ..._plans.where((p) => p.tier != SubscriptionTier.free).map((plan) => Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -99,7 +161,7 @@ class BillingScreen extends ConsumerWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () => _subscribe(context, ref, user, plan.tier),
+                        onPressed: () => _showComingSoon('Subscribing'),
                         child: Text(plan.priceUgx > 0 ? 'Subscribe — UGX ${plan.priceUgx.toStringAsFixed(0)}' : 'Switch to Free'),
                       ),
                     ),
@@ -128,7 +190,7 @@ class BillingScreen extends ConsumerWidget {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: () => _purchaseBoost(context, ref, user),
+                      onPressed: () => _showComingSoon('Post Boost'),
                       child: const Text('Boost'),
                     ),
                   ],
@@ -138,11 +200,11 @@ class BillingScreen extends ConsumerWidget {
           ],
 
           // Transaction history
-          if (transactions.isNotEmpty) ...[
+          if (_transactions.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Transaction History', style: theme.textTheme.titleLarge),
             const SizedBox(height: 12),
-            ...transactions.map((tx) => Card(
+            ..._transactions.map((tx) => Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 leading: Icon(tx.success ? Icons.check_circle : Icons.cancel,
@@ -181,39 +243,5 @@ class BillingScreen extends ConsumerWidget {
       SubscriptionTier.clubProfessional => 'All features including roster confirmation and scout management.',
       SubscriptionTier.clubEnterprise => 'Custom enterprise pricing with dedicated support.',
     };
-  }
-
-  void _subscribe(BuildContext context, WidgetRef ref, User user, SubscriptionTier tier) async {
-    final repo = ref.read(paymentRepositoryProvider);
-    final plan = repo.getPlan(tier);
-    if (plan == null) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Simulating payment of UGX ${plan.priceUgx.toStringAsFixed(0)}...')),
-    );
-
-    // Simulate payment delay and subscribe
-    final updated = await repo.subscribe(
-      user: user,
-      tier: tier,
-      provider: PaymentProvider.mtnMobileMoney,
-      amountUgx: plan.priceUgx,
-    );
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Subscribed to ${plan.name}!'), backgroundColor: Colors.green),
-      );
-    }
-  }
-
-  void _purchaseBoost(BuildContext context, WidgetRef ref, User user) async {
-    final repo = ref.read(paymentRepositoryProvider);
-    await repo.purchaseBoost(userId: user.id, provider: PaymentProvider.mtnMobileMoney);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Post Boost activated! Your post will be promoted for 7 days.'), backgroundColor: Colors.green),
-      );
-    }
   }
 }

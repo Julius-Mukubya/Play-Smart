@@ -1,13 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/profiles/repositories/profile_repository.dart';
+import 'package:play_smart/profiles/repositories/mock_profile_repository.dart';
+import 'package:play_smart/profiles/repositories/profile_repository.dart' show ProfileException;
 import 'package:play_smart/shared/types/domain_types.dart';
 
+// Exercises profile business rules (completeness calc, search filters, CRUD)
+// against the in-memory mock — the real `ProfileRepository` talks to Supabase.
+// See lib/supabase-integration.md for how to verify it against a live project.
 void main() {
   group('ProfileRepository', () {
-    late ProfileRepository repository;
+    late MockProfileRepository repository;
 
     setUp(() {
-      repository = ProfileRepository();
+      repository = MockProfileRepository();
     });
 
     test('getAllAthletes returns all athletes', () {

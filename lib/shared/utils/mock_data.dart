@@ -236,7 +236,7 @@ class MockData {
       athleteId: 'athlete-1',
       athleteName: 'John Muwonge',
       message: 'I am interested in trying out for Express FC.',
-      accepted: true,
+      status: 'accepted',
     ),
     Application(
       id: 'app-2',
@@ -244,7 +244,6 @@ class MockData {
       athleteId: 'athlete-2',
       athleteName: 'Sarah Nakato',
       message: 'Would love to showcase my skills.',
-      accepted: false,
     ),
   ];
 

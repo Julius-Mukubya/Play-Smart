@@ -1,69 +1,37 @@
+import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/utils/mock_data.dart';
 
-/// Notification repository — handles notification events and delivery.
+/// Notification repository — read-only access to `public.notifications` plus
+/// marking rows read. There is NO insert path here: notification rows are
+/// created exclusively by database triggers on the events they represent
+/// (shortlisted, message request, etc.) — the client can never create one
+/// directly (RLS has no insert grant for this table). See
+/// `lib/supabase-integration.md` section 5.
 class NotificationRepository {
-  final List<AppNotification> _notifications = List.from(MockData.notifications);
+  static const _table = 'notifications';
 
-  /// Get all notifications for a user.
-  List<AppNotification> getNotifications(String userId) {
-    return _notifications.where((n) => n.userId == userId).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  Future<List<AppNotification>> getNotifications(String userId) async {
+    final rows = await supabase
+        .from(_table)
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((r) => AppNotification.fromJson(r as Map<String, dynamic>))
+        .toList();
   }
 
-  /// Get unread notification count.
-  int getUnreadCount(String userId) {
-    return _notifications.where((n) => n.userId == userId && !n.read).length;
+  Future<int> getUnreadCount(String userId) async {
+    final rows =
+        await supabase.from(_table).select('id').eq('user_id', userId).eq('read', false);
+    return (rows as List).length;
   }
 
-  /// Create a notification.
-  Future<AppNotification> createNotification(AppNotification notification) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    _notifications.add(notification);
-    return notification;
-  }
-
-  /// Mark a notification as read.
   Future<void> markAsRead(String notificationId) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    final index = _notifications.indexWhere((n) => n.id == notificationId);
-    if (index >= 0) {
-      final n = _notifications[index];
-      _notifications[index] = AppNotification(
-        id: n.id, userId: n.userId, type: n.type,
-        title: n.title, body: n.body, relatedId: n.relatedId,
-        read: true, createdAt: n.createdAt,
-      );
-    }
+    await supabase.from(_table).update({'read': true}).eq('id', notificationId);
   }
 
-  /// Mark all notifications as read for a user.
   Future<void> markAllAsRead(String userId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    for (int i = 0; i < _notifications.length; i++) {
-      if (_notifications[i].userId == userId && !_notifications[i].read) {
-        final n = _notifications[i];
-        _notifications[i] = AppNotification(
-          id: n.id, userId: n.userId, type: n.type,
-          title: n.title, body: n.body, relatedId: n.relatedId,
-          read: true, createdAt: n.createdAt,
-        );
-      }
-    }
-  }
-
-  /// Create a notification for a specific event type.
-  Future<AppNotification> notify({
-    required String userId,
-    required NotificationType type,
-    required String title,
-    required String body,
-    String? relatedId,
-  }) async {
-    return createNotification(AppNotification(
-      id: 'notif-${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId, type: type,
-      title: title, body: body, relatedId: relatedId,
-    ));
+    await supabase.from(_table).update({'read': true}).eq('user_id', userId).eq('read', false);
   }
 }

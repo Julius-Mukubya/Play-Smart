@@ -20,7 +20,7 @@ class ContentNotifier extends Notifier<AsyncValue<List<AthleteContent>>> {
   Future<void> loadContent(String athleteId) async {
     state = const AsyncValue.loading();
     try {
-      final content = _repository.getContentByAthleteId(athleteId);
+      final content = await _repository.getContentByAthleteId(athleteId);
       state = AsyncValue.data(content);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

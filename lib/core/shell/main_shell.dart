@@ -53,7 +53,7 @@ class MainShell extends ConsumerWidget {
           activeIcon: Icon(Icons.event),
           label: 'Opportunities',
         ),
-      AccountRole.guest => const BottomNavigationBarItem(
+      AccountRole.guest || AccountRole.admin => const BottomNavigationBarItem(
           icon: Icon(Icons.explore_outlined),
           activeIcon: Icon(Icons.explore),
           label: 'Explore',

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Athlete profile setup — multi-step onboarding flow for first-time athletes.
@@ -53,9 +56,44 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
     super.dispose();
   }
 
-  void _handleComplete() {
-    // In a real app, this would save to the backend
-    // For now, navigate to discover
+  bool _isSaving = false;
+
+  Future<void> _handleComplete() async {
+    final authState = ref.read(authProvider);
+    if (authState is! AuthAuthenticated) return;
+
+    setState(() => _isSaving = true);
+
+    final profile = Athlete(
+      id: '', // assigned by the database
+      userId: authState.user.id,
+      displayName: _nameController.text.trim().isEmpty
+          ? authState.user.name
+          : _nameController.text.trim(),
+      sports: _selectedSports,
+      positions: _selectedPositions,
+      height: double.tryParse(_heightController.text.trim()),
+      weight: double.tryParse(_weightController.text.trim()),
+      dominantFootHand: _dominantFoot,
+      currentTeam: _teamController.text.trim().isEmpty ? null : _teamController.text.trim(),
+      country: _country,
+      city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+      bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+      availabilityStatus: _availability,
+    );
+
+    final error = await ref.read(profileProvider.notifier).createProfile(profile);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save profile: $error')),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Profile saved successfully!')),
     );
@@ -74,13 +112,15 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
         key: _formKey,
         child: Stepper(
           currentStep: _currentStep,
-          onStepContinue: () {
-            if (_currentStep < 3) {
-              setState(() => _currentStep++);
-            } else {
-              _handleComplete();
-            }
-          },
+          onStepContinue: _isSaving
+              ? null
+              : () {
+                  if (_currentStep < 3) {
+                    setState(() => _currentStep++);
+                  } else {
+                    _handleComplete();
+                  }
+                },
           onStepCancel: () {
             if (_currentStep > 0) {
               setState(() => _currentStep--);
@@ -93,11 +133,17 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
                 children: [
                   ElevatedButton(
                     onPressed: details.onStepContinue,
-                    child: Text(_currentStep < 3 ? 'Continue' : 'Save Profile'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(_currentStep < 3 ? 'Continue' : 'Save Profile'),
                   ),
                   if (_currentStep > 0)
                     TextButton(
-                      onPressed: details.onStepCancel,
+                      onPressed: _isSaving ? null : details.onStepCancel,
                       child: const Text('Back'),
                     ),
                 ],

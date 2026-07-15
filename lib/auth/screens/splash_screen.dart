@@ -44,10 +44,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.sports_soccer,
-              size: 80,
-              color: theme.colorScheme.primary,
+            Image.asset(
+              'lib/assets/images/logo_mark.png',
+              height: 96,
             ),
             const SizedBox(height: 16),
             Text(

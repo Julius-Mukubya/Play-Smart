@@ -1,92 +1,128 @@
+import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/utils/mock_data.dart';
 
-/// Messaging repository — handles message requests and conversation threads.
-/// Uses mock data; swap with real API calls when backend is connected.
+/// Messaging repository — Supabase-backed message requests + conversation
+/// threads. An accepted `message_requests` row doubles as the conversation
+/// (its `id` is `messages.conversation_id`) — there is no separate
+/// conversations table, matching the app's existing model.
+///
+/// `messages` insert is guarded server-side by a trigger that raises unless
+/// the parent request has `accepted = true` (invariant #1) — a
+/// `PostgrestException` from that trigger surfaces here as a
+/// `MessagingException`.
 class MessagingRepository {
-  final List<MessageRequest> _requests = List.from(MockData.messageRequests);
-  final List<Message> _messages = List.from(MockData.messages);
+  static const _requestsTable = 'message_requests';
+  static const _messagesTable = 'messages';
 
-  /// Get all message requests for a user (as recipient).
-  List<MessageRequest> getRequestsForUser(String userId) {
-    return _requests.where((r) => r.toUserId == userId).toList();
+  Future<List<MessageRequest>> getRequestsForUser(String userId) async {
+    final rows = await supabase.from(_requestsTable).select().eq('to_user_id', userId);
+    return (rows as List).map((r) => MessageRequest.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Get all sent message requests from a user.
-  List<MessageRequest> getSentRequests(String userId) {
-    return _requests.where((r) => r.fromUserId == userId).toList();
+  Future<List<MessageRequest>> getSentRequests(String userId) async {
+    final rows = await supabase.from(_requestsTable).select().eq('from_user_id', userId);
+    return (rows as List).map((r) => MessageRequest.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Get pending (unaccepted) requests for a user.
-  List<MessageRequest> getPendingRequests(String userId) {
-    return _requests.where((r) => r.toUserId == userId && !r.accepted).toList();
+  Future<List<MessageRequest>> getPendingRequests(String userId) async {
+    final rows = await supabase
+        .from(_requestsTable)
+        .select()
+        .eq('to_user_id', userId)
+        .eq('accepted', false);
+    return (rows as List).map((r) => MessageRequest.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Get accepted requests (active conversations).
-  List<MessageRequest> getConversations(String userId) {
-    return _requests.where((r) =>
-        (r.toUserId == userId || r.fromUserId == userId) && r.accepted).toList();
+  Future<List<MessageRequest>> getConversations(String userId) async {
+    final rows = await supabase
+        .from(_requestsTable)
+        .select()
+        .or('to_user_id.eq.$userId,from_user_id.eq.$userId')
+        .eq('accepted', true);
+    return (rows as List).map((r) => MessageRequest.fromJson(r as Map<String, dynamic>)).toList();
   }
 
-  /// Send a message request.
+  /// Send a message request. `requires_monitoring` is computed server-side
+  /// from both parties' `is_under_18` — the client never sets it directly.
   Future<MessageRequest> sendRequest(MessageRequest request) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    _requests.add(request);
-    return request;
-  }
+    try {
+      final parties = await supabase
+          .from('users')
+          .select('id, is_under_18')
+          .inFilter('id', [request.fromUserId, request.toUserId]);
+      final requiresMonitoring =
+          (parties as List).any((u) => u['is_under_18'] == true);
 
-  /// Accept a message request and open a conversation.
-  Future<MessageRequest> acceptRequest(String requestId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    final index = _requests.indexWhere((r) => r.id == requestId);
-    if (index < 0) throw MessagingException('Message request not found.');
-    final request = _requests[index];
-    final updated = MessageRequest(
-      id: request.id,
-      fromUserId: request.fromUserId,
-      fromUserName: request.fromUserName,
-      toUserId: request.toUserId,
-      message: request.message,
-      accepted: true,
-      createdAt: request.createdAt,
-    );
-    _requests[index] = updated;
-    return updated;
-  }
-
-  /// Decline a message request.
-  Future<void> declineRequest(String requestId) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _requests.removeWhere((r) => r.id == requestId);
-  }
-
-  /// Get messages in a conversation.
-  List<Message> getConversationMessages(String conversationId) {
-    return _messages.where((m) => m.conversationId == conversationId).toList();
-  }
-
-  /// Send a message in a conversation.
-  Future<Message> sendMessage(Message message) async {
-    await Future.delayed(const Duration(milliseconds: 200));
-    _messages.add(message);
-    return message;
-  }
-
-  /// Mark all messages in a conversation as read.
-  Future<void> markAsRead(String conversationId, String userId) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    for (int i = 0; i < _messages.length; i++) {
-      if (_messages[i].conversationId == conversationId && _messages[i].senderId != userId) {
-        _messages[i] = Message(
-          id: _messages[i].id,
-          conversationId: _messages[i].conversationId,
-          senderId: _messages[i].senderId,
-          text: _messages[i].text,
-          read: true,
-          sentAt: _messages[i].sentAt,
-        );
-      }
+      final row = await supabase.from(_requestsTable).insert({
+        'from_user_id': request.fromUserId,
+        'from_user_name': request.fromUserName,
+        'to_user_id': request.toUserId,
+        'message': request.message,
+        'requires_monitoring': requiresMonitoring,
+      }).select().single();
+      return MessageRequest.fromJson(row);
+    } catch (e) {
+      throw MessagingException(_friendlyMessage(e));
     }
+  }
+
+  Future<MessageRequest> acceptRequest(String requestId) async {
+    try {
+      final row = await supabase
+          .from(_requestsTable)
+          .update({'accepted': true})
+          .eq('id', requestId)
+          .select()
+          .single();
+      return MessageRequest.fromJson(row);
+    } catch (e) {
+      throw MessagingException('Message request not found.');
+    }
+  }
+
+  Future<void> declineRequest(String requestId) async {
+    await supabase.from(_requestsTable).delete().eq('id', requestId);
+  }
+
+  Future<List<Message>> getConversationMessages(String conversationId) async {
+    final rows = await supabase
+        .from(_messagesTable)
+        .select()
+        .eq('conversation_id', conversationId)
+        .order('sent_at');
+    return (rows as List).map((r) => Message.fromJson(r as Map<String, dynamic>)).toList();
+  }
+
+  /// Send a message. Rejected server-side (invariant #1) unless the parent
+  /// `message_requests` row is already accepted.
+  Future<Message> sendMessage(Message message) async {
+    try {
+      final row = await supabase.from(_messagesTable).insert({
+        'conversation_id': message.conversationId,
+        'sender_id': message.senderId,
+        'text': message.text,
+      }).select().single();
+      return Message.fromJson(row);
+    } catch (e) {
+      throw MessagingException(
+          'Cannot send a message until the athlete accepts the request.');
+    }
+  }
+
+  Future<void> markAsRead(String conversationId, String userId) async {
+    await supabase
+        .from(_messagesTable)
+        .update({'read': true})
+        .eq('conversation_id', conversationId)
+        .neq('sender_id', userId);
+  }
+
+  String _friendlyMessage(Object e) {
+    final message = e.toString();
+    if (message.contains('allow_message_requests')) {
+      return 'This athlete is not accepting message requests right now.';
+    }
+    return 'Could not send message request. Please try again.';
   }
 }
 

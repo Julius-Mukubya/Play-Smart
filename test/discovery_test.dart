@@ -1,14 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/discovery/repositories/discovery_repository.dart';
-import 'package:play_smart/profiles/repositories/profile_repository.dart';
+import 'package:play_smart/discovery/repositories/mock_discovery_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
+// Exercises search/filter/feed logic against the in-memory mock — the real
+// `DiscoveryRepository` queries Supabase. See lib/supabase-integration.md.
 void main() {
   group('DiscoveryRepository', () {
-    late DiscoveryRepository repository;
+    late MockDiscoveryRepository repository;
 
     setUp(() {
-      repository = DiscoveryRepository();
+      repository = MockDiscoveryRepository();
     });
 
     test('getDiscoverFeed returns all athletes', () {

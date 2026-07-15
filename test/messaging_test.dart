@@ -1,14 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:play_smart/messaging/repositories/messaging_repository.dart';
+import 'package:play_smart/messaging/repositories/messaging_repository.dart' show MessagingException;
+import 'package:play_smart/messaging/repositories/mock_messaging_repository.dart';
 import 'package:play_smart/messaging/services/messaging_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
+// Exercises message-request/conversation logic against the in-memory mock —
+// the real `MessagingRepository` talks to Supabase. See lib/supabase-integration.md.
 void main() {
   group('MessagingRepository', () {
-    late MessagingRepository repository;
+    late MockMessagingRepository repository;
 
     setUp(() {
-      repository = MessagingRepository();
+      repository = MockMessagingRepository();
     });
 
     test('getRequestsForUser returns requests for user', () {

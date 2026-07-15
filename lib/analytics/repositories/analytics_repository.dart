@@ -1,77 +1,41 @@
+import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/utils/mock_data.dart';
 
-/// Analytics repository — handles profile view tracking and analytics queries.
+/// Analytics repository — profile view/shortlist tracking via RPCs rather
+/// than direct table access. There is no client insert or select grant on
+/// `public.analytics_events` at all (viewer identity must not be spoofable,
+/// and free-tier athletes must not see full per-viewer data) — every read
+/// and write goes through a Postgres function that enforces the free/premium
+/// split server-side. See `lib/supabase-integration.md` section 4.
 class AnalyticsRepository {
-  final List<AnalyticsEvent> _events = List.from(MockData.analyticsEvents);
-
-  /// Record a profile view event.
-  Future<AnalyticsEvent> recordView({
+  /// Record a profile view. Never inserts into `analytics_events` directly.
+  Future<void> recordView({
     required String athleteId,
     String? viewerId,
     String? viewerName,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    final event = AnalyticsEvent(
-      id: 'ae-${DateTime.now().millisecondsSinceEpoch}',
-      athleteId: athleteId,
-      viewerId: viewerId,
-      viewerName: viewerName,
-      eventType: 'view',
-    );
-    _events.add(event);
-    return event;
+    await supabase.rpc('record_profile_view', params: {'p_athlete_id': athleteId});
   }
 
-  /// Record a shortlist event.
-  Future<AnalyticsEvent> recordShortlist({
-    required String athleteId,
-    required String viewerId,
-    required String viewerName,
-  }) async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    final event = AnalyticsEvent(
-      id: 'ae-${DateTime.now().millisecondsSinceEpoch}',
-      athleteId: athleteId,
-      viewerId: viewerId,
-      viewerName: viewerName,
-      eventType: 'shortlist',
-    );
-    _events.add(event);
-    return event;
-  }
-
-  /// Get view count for an athlete (free tier — aggregate only).
-  int getViewCount(String athleteId) {
-    return _events.where((e) => e.athleteId == athleteId && e.eventType == 'view').length;
+  /// Get aggregate view count for an athlete (free tier — safe for anyone to call).
+  Future<int> getViewCount(String athleteId) async {
+    final result = await supabase.rpc('get_view_count', params: {'p_athlete_id': athleteId});
+    return result as int;
   }
 
   /// Get shortlist count for an athlete.
-  int getShortlistCount(String athleteId) {
-    return _events.where((e) => e.athleteId == athleteId && e.eventType == 'shortlist').length;
+  Future<int> getShortlistCount(String athleteId) async {
+    final result =
+        await supabase.rpc('get_shortlist_count', params: {'p_athlete_id': athleteId});
+    return result as int;
   }
 
-  /// Get full analytics events for an athlete (premium tier — includes viewer identity).
-  List<AnalyticsEvent> getFullAnalytics(String athleteId) {
-    return _events.where((e) => e.athleteId == athleteId).toList()
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-  }
-
-  /// Get recent (anonymous) views for free tier.
-  int getRecentViewCount(String athleteId, {Duration within = const Duration(days: 7)}) {
-    final cutoff = DateTime.now().subtract(within);
-    return _events.where((e) =>
-        e.athleteId == athleteId &&
-        e.eventType == 'view' &&
-        e.timestamp.isAfter(cutoff)).length;
-  }
-
-  /// Get unique viewers (premium tier).
-  int getUniqueViewerCount(String athleteId) {
-    return _events
-        .where((e) => e.athleteId == athleteId && e.eventType == 'view' && e.viewerId != null)
-        .map((e) => e.viewerId)
-        .toSet()
-        .length;
+  /// Full per-viewer analytics (premium tier only). The RPC raises unless the
+  /// athlete's own subscription is `premium_monthly`/`premium_annual` — that
+  /// exception surfaces here rather than being checked client-side, since the
+  /// client must not be trusted to enforce the tier gate.
+  Future<List<AnalyticsEvent>> getFullAnalytics(String athleteId) async {
+    final rows = await supabase.rpc('get_full_analytics', params: {'p_athlete_id': athleteId});
+    return (rows as List).map((r) => AnalyticsEvent.fromJson(r as Map<String, dynamic>)).toList();
   }
 }

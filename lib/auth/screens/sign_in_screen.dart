@@ -7,7 +7,11 @@ import 'package:play_smart/core/router/app_router.dart';
 
 /// Sign In screen — login for all account types.
 class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+  /// Pre-fills the email field — used by "Switch Account" so the user only
+  /// has to type the password for an account they've used on this device.
+  final String? prefillEmail;
+
+  const SignInScreen({super.key, this.prefillEmail});
 
   @override
   ConsumerState<SignInScreen> createState() => _SignInScreenState();
@@ -15,7 +19,8 @@ class SignInScreen extends ConsumerStatefulWidget {
 
 class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  late final _emailController =
+      TextEditingController(text: widget.prefillEmail ?? '');
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -59,10 +64,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               children: [
                 const SizedBox(height: 48),
                 // Logo / Brand
-                Icon(
-                  Icons.sports_soccer,
-                  size: 64,
-                  color: theme.colorScheme.primary,
+                Image.asset(
+                  'lib/assets/images/logo_mark.png',
+                  height: 72,
                 ),
                 const SizedBox(height: 16),
                 Text(

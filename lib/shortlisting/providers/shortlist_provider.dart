@@ -60,7 +60,7 @@ class ShortlistNotifier extends Notifier<ShortlistState> {
     if (userId == null) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final lists = _repository.getShortlistsByOwner(userId);
+      final lists = await _repository.getShortlistsByOwner(userId);
       state = state.copyWith(shortlists: lists, isLoading: false);
     } catch (e, st) {
       state = state.copyWith(isLoading: false, error: e.toString());

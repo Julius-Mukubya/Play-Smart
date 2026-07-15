@@ -19,10 +19,9 @@ class LandingScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 48),
               // Hero section
-              Icon(
-                Icons.sports_soccer,
-                size: 80,
-                color: theme.colorScheme.primary,
+              Image.asset(
+                'lib/assets/images/logo_mark.png',
+                height: 96,
               ),
               const SizedBox(height: 16),
               Text(

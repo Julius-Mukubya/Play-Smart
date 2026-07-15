@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/repositories/auth_repository.dart';
+import 'package:play_smart/auth/repositories/known_accounts_store.dart';
 import 'package:play_smart/auth/services/auth_service.dart';
+import 'package:play_smart/core/push/push_notification_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Auth repository provider.
@@ -13,6 +15,11 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 final authServiceProvider = Provider<AuthService>((ref) {
   final repository = ref.watch(authRepositoryProvider);
   return AuthService(repository);
+});
+
+/// Store of accounts previously used on this device — powers "Switch Account".
+final knownAccountsStoreProvider = Provider<KnownAccountsStore>((ref) {
+  return KnownAccountsStore();
 });
 
 /// Auth notifier — manages authentication state.
@@ -31,6 +38,8 @@ class AuthNotifier extends Notifier<AuthState> {
       final user = await _authService.getSession();
       if (user != null) {
         state = AuthAuthenticated(user: user);
+        await PushNotificationService.instance.registerToken(user.id);
+        await ref.read(knownAccountsStoreProvider).remember(user);
       } else {
         state = const AuthUnauthenticated();
       }
@@ -58,6 +67,8 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       final user = await _authService.signUp(data);
       state = AuthAuthenticated(user: user);
+      await PushNotificationService.instance.registerToken(user.id);
+      await ref.read(knownAccountsStoreProvider).remember(user);
     } on AuthException catch (e) {
       state = AuthError(message: e.message);
     } catch (_) {
@@ -75,6 +86,8 @@ class AuthNotifier extends Notifier<AuthState> {
       final data = SignInData(email: email, password: password);
       final user = await _authService.signIn(data);
       state = AuthAuthenticated(user: user);
+      await PushNotificationService.instance.registerToken(user.id);
+      await ref.read(knownAccountsStoreProvider).remember(user);
     } on AuthException catch (e) {
       state = AuthError(message: e.message);
     } catch (_) {
@@ -85,6 +98,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Sign out the current user.
   Future<void> signOut() async {
     state = const AuthLoading();
+    await PushNotificationService.instance.unregisterToken();
     await _authService.signOut();
     state = const AuthUnauthenticated();
   }
