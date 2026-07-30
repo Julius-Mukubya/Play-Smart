@@ -40,6 +40,58 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
     'Goalkeeper', 'Defender', 'Midfielder', 'Striker', 'Winger',
   ];
 
+  final List<String> _netballPositions = [
+    'GS (Goal Shooter)', 'GA (Goal Attack)', 'WA (Wing Attack)', 'C (Center)', 'WD (Wing Defence)', 'GD (Goal Defence)', 'GK (Goal Keeper)'
+  ];
+
+  final List<String> _basketballPositions = [
+    'Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'
+  ];
+
+  final List<String> _rugbyPositions = [
+    'Prop', 'Hooker', 'Lock', 'Flanker', 'Number 8', 'Scrum-half', 'Fly-half', 'Centre', 'Wing', 'Full-back'
+  ];
+
+  final List<String> _athleticsPositions = [
+    'Sprinter', 'Middle Distance', 'Long Distance', 'Jumper', 'Thrower'
+  ];
+
+  final List<String> _generalPositions = [
+    'Player', 'Coach', 'Captain / Leader', 'Other'
+  ];
+
+  List<String> get _activePositions {
+    final list = <String>{};
+    if (_selectedSports.isEmpty) {
+      list.addAll(_footballPositions);
+      list.addAll(_netballPositions);
+      list.addAll(_basketballPositions);
+    } else {
+      for (final sport in _selectedSports) {
+        switch (sport) {
+          case 'Football':
+            list.addAll(_footballPositions);
+            break;
+          case 'Netball':
+            list.addAll(_netballPositions);
+            break;
+          case 'Basketball':
+            list.addAll(_basketballPositions);
+            break;
+          case 'Rugby':
+            list.addAll(_rugbyPositions);
+            break;
+          case 'Athletics':
+            list.addAll(_athleticsPositions);
+            break;
+          default:
+            list.addAll(_generalPositions);
+        }
+      }
+    }
+    return list.toList();
+  }
+
   final List<String> _availableCountries = [
     'Uganda', 'Kenya', 'Tanzania', 'Rwanda', 'Burundi',
     'South Sudan', 'DRC', 'Ethiopia',
@@ -107,6 +159,12 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Complete Your Profile'),
+        actions: [
+          TextButton(
+            onPressed: () => context.go(AppRouter.discover),
+            child: const Text('Skip'),
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
@@ -195,7 +253,7 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
-                    children: _footballPositions.map((pos) {
+                    children: _activePositions.map((pos) {
                       final selected = _selectedPositions.contains(pos);
                       return FilterChip(
                         label: Text(pos),
@@ -211,6 +269,31 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
                         },
                       );
                     }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Other/Custom Position',
+                            hintText: 'Type and press enter to add',
+                            prefixIcon: Icon(Icons.add),
+                            isDense: true,
+                          ),
+                          onSubmitted: (val) {
+                            final trimmed = val.trim();
+                            if (trimmed.isNotEmpty) {
+                              setState(() {
+                                if (!_selectedPositions.contains(trimmed)) {
+                                  _selectedPositions.add(trimmed);
+                                }
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

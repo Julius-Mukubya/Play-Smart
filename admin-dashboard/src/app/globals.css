@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F4F7FE;
+  --foreground: #1B2B65;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-neutral-950: #F4F7FE; /* Page background */
+  --color-neutral-900: #FFFFFF; /* Cards/Surface */
+  --color-neutral-800: #F7F9FC; /* Secondary / Hover */
+  --color-neutral-700: #E9EDF7; /* Border default */
+  --color-neutral-600: #D0D5DD; /* Hover / Border focus */
+  --color-neutral-500: #A3AED0; /* Muted text lavender */
+  --color-neutral-400: #A3AED0; /* Muted text lavender */
+  --color-neutral-300: #1B254B; /* Primary text navy */
+  --color-neutral-200: #1B254B;
+  --color-neutral-100: #1B254B;
+
+  --color-blue-600: #4318FF; /* Primary accent indigo */
+  --color-blue-500: #7551FF; /* Light indigo */
+  --color-blue-700: #3311DB; /* Dark indigo */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}

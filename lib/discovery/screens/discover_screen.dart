@@ -1,13 +1,19 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/shortlisting/providers/shortlist_provider.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/core/shell/main_shell.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
 import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
+import 'package:video_player/video_player.dart';
 
 /// Discover screen — horizontal PageView, one full-screen card per swipe.
 /// Swipe LEFT for next content, swipe RIGHT for previous.
@@ -68,10 +74,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ── Horizontal swipeable feed ───────────────────────────────────
+        // ── Vertical swipeable feed ───────────────────────────────────
         PageView.builder(
           controller: _pageController,
-          scrollDirection: Axis.horizontal,
+          scrollDirection: Axis.vertical,
           itemCount: state.feedItems.length,
           onPageChanged: (i) => setState(() => _currentPage = i),
           itemBuilder: (ctx, i) => _FullScreenCard(
@@ -88,33 +94,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: _TopBar(),
         ),
 
-        // ── Category tabs pinned below top bar ──────────────────────────
+        // ── Right progress dots (vertical, right side) ──────────────────
         Positioned(
-          top: MediaQuery.of(context).padding.top + 60,
-          left: 0,
-          right: 0,
-          child: _CategoryBar(
-            onFilterChanged: (sport) {
-              if (sport == 'All') {
-                ref.read(discoveryProvider.notifier).loadDiscoverFeed();
-              } else {
-                ref
-                    .read(discoveryProvider.notifier)
-                    .updateFilters(SearchFilters(sport: sport));
-              }
-            },
-          ),
-        ),
-
-        // ── Bottom progress dots ────────────────────────────────────────
-        Positioned(
-          bottom: MediaQuery.of(context).padding.bottom + 12,
-          left: 0,
-          right: 0,
-          child: _ProgressDots(
-            count: state.feedItems.length.clamp(0, 10),
-            current: _currentPage.clamp(
-                0, state.feedItems.length - 1),
+          right: 12,
+          top: 0,
+          bottom: 0,
+          child: Center(
+            child: _VerticalProgressDots(
+              count: state.feedItems.length.clamp(0, 10),
+              current: _currentPage.clamp(0, state.feedItems.length - 1),
+            ),
           ),
         ),
       ],
@@ -157,7 +146,7 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
   }
 
   void _doubleTapLike() {
-    final id = widget.item.content.id;
+    final id = widget.item.content!.id;
     final liked =
         ref.read(discoveryProvider).likedContentIds.contains(id);
     if (!liked) ref.read(discoveryProvider.notifier).toggleLike(id);
@@ -169,22 +158,129 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
     });
   }
 
+  Widget _buildAdCard(BuildContext context, FeedItem item) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (item.adImageUrl != null)
+          CachedNetworkImage(
+            imageUrl: item.adImageUrl!,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            height: double.infinity,
+          ),
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                Colors.black.withOpacity(0.9),
+                Colors.black.withOpacity(0.2),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          top: MediaQuery.of(context).padding.top + 60,
+          left: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade700,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.campaign, color: Colors.white, size: 14),
+                SizedBox(width: 4),
+                Text(
+                  'SPONSORED AD',
+                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 60,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.adTitle ?? 'Sponsored',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.adDescription ?? '',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Opening sponsor link for ${item.adTitle}...'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A90D9),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Learn More'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    if (item.isAd) {
+      return _buildAdCard(context, item);
+    }
     final isLiked = ref
         .watch(discoveryProvider)
         .likedContentIds
-        .contains(item.content.id);
+        .contains(item.content!.id);
+    // StatefulShellRoute keeps Discover mounted (via IndexedStack) even when
+    // another bottom-nav tab is showing, so widget.isActive alone (which
+    // page of the PageView is current) isn't enough to know a video should
+    // actually be playing — it also needs the Discover tab itself visible.
+    final tabVisible = ref.watch(activeShellTabIndexProvider) == 0;
+    final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
+    final visible = widget.isActive && tabVisible && isCurrentRoute;
 
     return GestureDetector(
+      // Tapping the video itself no longer navigates — only double-tap
+      // (like) is handled here. Navigating to the profile is now only
+      // triggered from the profile-specific tap targets: the athlete strip
+      // (_AthleteStrip) and the rail's Profile/comment buttons.
       onDoubleTap: _doubleTapLike,
-      onTap: () => context.push('/athlete/${item.athlete.id}'),
       child: Stack(
         fit: StackFit.expand,
         children: [
           // Media background
-          _MediaBackground(item: item),
+          _MediaBackground(item: item, isActive: visible),
 
           // Bottom gradient vignette
           Positioned(
@@ -204,11 +300,11 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
           ),
 
           // Moment tag — mid-left
-          if (item.content.momentTag != null)
+          if (item.content?.momentTag != null)
             Positioned(
               left: 16,
               bottom: 160,
-              child: _MomentChip(tag: item.content.momentTag!),
+              child: _MomentChip(tag: item.content!.momentTag!),
             ),
 
           // Right action rail
@@ -223,7 +319,7 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
             left: 0,
             right: 72,
             bottom: 40,
-            child: _AthleteStrip(item: item),
+            child: _AthleteStrip(item: item, isLiked: isLiked),
           ),
 
           // Double-tap heart burst
@@ -252,54 +348,51 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
 
 class _MediaBackground extends StatelessWidget {
   final FeedItem item;
-  const _MediaBackground({required this.item});
+  final bool isActive;
+  const _MediaBackground({required this.item, required this.isActive});
+
+  Widget _placeholderGradient(IconData icon) {
+    final athlete = item.athlete!;
+    final hue = (athlete.id.hashCode.abs() % 36) * 10.0;
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            HSLColor.fromAHSL(1, hue, 0.5, 0.25).toColor(),
+            HSLColor.fromAHSL(1, hue + 20, 0.4, 0.15).toColor(),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, size: 72, color: Colors.white30),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final content = item.content;
-    final athlete = item.athlete;
+    final content = item.content!;
 
     if (content.type == ContentType.video) {
-      return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF0D1117),
-              Color.fromARGB(255,
-                20 + (athlete.id.hashCode.abs() % 40),
-                40 + (athlete.id.hashCode.abs() % 60),
-                100 + (athlete.id.hashCode.abs() % 80),
-              ),
-            ],
-          ),
-        ),
-        child: const Center(
-          child: Icon(Icons.play_circle_fill,
-              size: 90, color: Colors.white54),
-        ),
-      );
+      if (content.fileUrl == null) {
+        return _placeholderGradient(Icons.play_circle_fill);
+      }
+      return _VideoBackground(url: content.fileUrl!, isActive: isActive);
     }
 
-    if (content.type == ContentType.photo) {
-      final hue = (athlete.id.hashCode.abs() % 36) * 10.0;
       return Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              HSLColor.fromAHSL(1, hue, 0.5, 0.25).toColor(),
-              HSLColor.fromAHSL(1, hue + 20, 0.4, 0.15).toColor(),
-            ],
+        color: const Color(0xFF0D1117),
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: content.fileUrl!,
+            fit: BoxFit.contain,
+            placeholder: (context, url) => _placeholderGradient(Icons.image_outlined),
+            errorWidget: (context, url, error) => _placeholderGradient(Icons.broken_image_outlined),
           ),
         ),
-        child: const Center(
-          child: Icon(Icons.image_outlined, size: 72, color: Colors.white30),
-        ),
       );
-    }
 
     // Text post
     return Container(
@@ -333,18 +426,142 @@ class _MediaBackground extends StatelessWidget {
   }
 }
 
+/// Plays the uploaded video, cropped to fill the card (like a short-form
+/// feed). Playback follows the card's visibility — only the active page's
+/// video plays, everything else stays paused. A small button lets the user
+/// override that and pause/resume manually; the override resets whenever
+/// the card becomes freshly visible again (a new "view" autoplays).
+class _VideoBackground extends StatefulWidget {
+  final String url;
+  final bool isActive;
+  const _VideoBackground({required this.url, required this.isActive});
+
+  @override
+  State<_VideoBackground> createState() => _VideoBackgroundState();
+}
+
+class _VideoBackgroundState extends State<_VideoBackground> {
+  late final VideoPlayerController _controller;
+  bool _initialized = false;
+  bool _failed = false;
+  bool _userPaused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+    _controller
+      ..setLooping(true)
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() => _initialized = true);
+        if (widget.isActive) _controller.play();
+      }).catchError((_) {
+        if (mounted) setState(() => _failed = true);
+      });
+  }
+
+  @override
+  void didUpdateWidget(covariant _VideoBackground oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        // Freshly visible again — treat as a new view and autoplay,
+        // regardless of an earlier manual pause.
+        _userPaused = false;
+        if (_initialized) _controller.play();
+      } else if (_initialized) {
+        _controller.pause();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _togglePause() {
+    setState(() => _userPaused = !_userPaused);
+    if (_userPaused) {
+      _controller.pause();
+    } else if (widget.isActive) {
+      _controller.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return const ColoredBox(
+        color: Color(0xFF0D1117),
+        child: Center(
+          child: Icon(Icons.error_outline, size: 64, color: Colors.white30),
+        ),
+      );
+    }
+    if (!_initialized) {
+      return const ColoredBox(
+        color: Color(0xFF0D1117),
+        child: Center(child: CircularProgressIndicator(color: Colors.white54)),
+      );
+    }
+
+    final paused = _userPaused || !widget.isActive;
+
+    return GestureDetector(
+      onTap: _togglePause,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipRect(
+            child: FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                width: _controller.value.size.width,
+                height: _controller.value.size.height,
+                child: VideoPlayer(_controller),
+              ),
+            ),
+          ),
+          if (paused)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 48,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Athlete strip
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _AthleteStrip extends StatelessWidget {
   final FeedItem item;
-  const _AthleteStrip({required this.item});
+  final bool isLiked;
+  const _AthleteStrip({required this.item, required this.isLiked});
 
   @override
   Widget build(BuildContext context) {
-    final athlete = item.athlete;
-    final content = item.content;
+    final athlete = item.athlete!;
+    final content = item.content!;
+
+    const avatarColumnWidth = 58.0; // avatar diameter (48) + spacing (10)
 
     return GestureDetector(
       onTap: () => context.push('/athlete/${athlete.id}'),
@@ -354,6 +571,9 @@ class _AthleteStrip extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Row 1: avatar + name + trust badge only — the availability
+            // pill used to compete with these for the same line and was
+            // forcing everything to squeeze/truncate.
             Row(
               children: [
                 CircleAvatar(
@@ -371,43 +591,57 @@ class _AthleteStrip extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Flexible(
-                          child: Text(athlete.displayName,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 15),
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                        const SizedBox(width: 6),
-                        TrustBadge(
-                            level: athlete.profileBadgeLevel,
-                            size: BadgeSize.sm),
-                      ]),
-                      const SizedBox(height: 2),
-                      Text(
-                        [
-                          athlete.sports.isNotEmpty
-                              ? athlete.sports.first
-                              : null,
-                          athlete.positions.isNotEmpty
-                              ? athlete.positions.first
-                              : null,
-                          athlete.city,
-                        ].whereType<String>().join(' · '),
-                        style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                  child: Text(athlete.displayName,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15),
+                      overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: TrustBadge(level: athlete.profileBadgeLevel, size: BadgeSize.sm),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Row 2: sport/position/city + availability, indented to align
+            // under the name rather than the avatar.
+            Row(
+              children: [
+                const SizedBox(width: avatarColumnWidth),
+                Expanded(
+                  child: Text(
+                    [
+                      athlete.sports.isNotEmpty ? athlete.sports.first : null,
+                      athlete.positions.isNotEmpty ? athlete.positions.first : null,
+                      athlete.city,
+                    ].whereType<String>().join(' · '),
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                _AvailabilityPill(status: athlete.availabilityStatus),
+                 const SizedBox(width: 8),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const SizedBox(width: avatarColumnWidth),
+                Icon(Icons.favorite_rounded, size: 13, color: Colors.white.withValues(alpha: 0.8)),
+                const SizedBox(width: 4),
+                Text(
+                  '${item.likeCount + (isLiked ? 1 : 0)} likes',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(width: 14),
+                Icon(Icons.chat_bubble_rounded, size: 12, color: Colors.white.withValues(alpha: 0.8)),
+                const SizedBox(width: 4),
+                Text(
+                  '${item.commentCount} comments',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
             if (content.type != ContentType.post) ...[
@@ -449,35 +683,21 @@ class _ActionRail extends ConsumerWidget {
           color: isLiked ? Colors.redAccent : Colors.white,
           onTap: () => ref
               .read(discoveryProvider.notifier)
-              .toggleLike(item.content.id),
+              .toggleLike(item.content!.id),
         ),
         const SizedBox(height: 22),
         _RailBtn(
           icon: Icons.chat_bubble_outline_rounded,
           label: _fmt(item.commentCount),
           color: Colors.white,
-          onTap: () => context.push('/athlete/${item.athlete.id}'),
-        ),
-        const SizedBox(height: 22),
-        _RailBtn(
-          icon: Icons.bookmark_border_rounded,
-          label: 'Save',
-          color: Colors.white,
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                  '${item.athlete.displayName} saved to shortlist'),
-              behavior: SnackBarBehavior.floating,
-              duration: const Duration(seconds: 2),
-            ),
-          ),
+          onTap: () => _showCommentsSheet(context, item),
         ),
         const SizedBox(height: 22),
         _RailBtn(
           icon: Icons.person_add_outlined,
           label: 'Profile',
           color: Colors.white,
-          onTap: () => context.push('/athlete/${item.athlete.id}'),
+          onTap: () => context.push('/athlete/${item.athlete!.id}'),
         ),
       ],
     );
@@ -485,6 +705,273 @@ class _ActionRail extends ConsumerWidget {
 
   String _fmt(int n) =>
       n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
+}
+
+void _showCommentsSheet(BuildContext context, FeedItem item) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFF1E293B),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      final commentController = TextEditingController();
+      final List<Map<String, String>> comments = [
+        {'user': 'Scout Allan', 'text': 'Incredible pace and spatial awareness!'},
+        {'user': 'Coach Patrick', 'text': 'We need this talent in our academy trials next week.'},
+      ];
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              height: 400,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Comments',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: comments.length,
+                      itemBuilder: (ctx, idx) {
+                        final c = comments[idx];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundColor: const Color(0xFF4A90D9),
+                                child: Text(c['user']![0].toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.white)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(c['user']!, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 2),
+                                    Text(c['text']!, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(color: Colors.white24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: commentController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            hintText: 'Add a comment...',
+                            hintStyle: TextStyle(color: Colors.white30),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Color(0xFF4A90D9)),
+                        onPressed: () {
+                          if (commentController.text.trim().isNotEmpty) {
+                            setSheetState(() {
+                              comments.add({
+                                'user': 'You',
+                                'text': commentController.text.trim(),
+                              });
+                            });
+                            commentController.clear();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String athleteId, String athleteName) {
+  final authState = ref.read(authProvider);
+  if (authState is! AuthAuthenticated) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please sign in to shortlist athletes.')),
+    );
+    return;
+  }
+  
+  if (authState.user.role == AccountRole.athlete) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Only recruiters and clubs can shortlist athletes.')),
+    );
+    return;
+  }
+
+  ref.read(shortlistProvider.notifier).loadShortlists();
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF1E293B),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(shortlistProvider);
+          
+          if (state.isLoading) {
+            return const SizedBox(
+              height: 250,
+              child: Center(child: CircularProgressIndicator(color: Colors.white)),
+            );
+          }
+          
+          return Container(
+            padding: const EdgeInsets.all(20),
+            height: 350,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Save to Shortlist',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: state.shortlists.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No shortlists created yet.',
+                            style: TextStyle(color: Colors.white30),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: state.shortlists.length,
+                          itemBuilder: (ctx, idx) {
+                            final list = state.shortlists[idx];
+                            final isAdded = list.athleteIds.contains(athleteId);
+                            return ListTile(
+                              title: Text(list.name, style: const TextStyle(color: Colors.white)),
+                              trailing: Icon(
+                                isAdded ? Icons.bookmark_added : Icons.bookmark_add_outlined,
+                                color: isAdded ? const Color(0xFF4A90D9) : Colors.white54,
+                              ),
+                              onTap: () {
+                                if (isAdded) {
+                                  ref.read(shortlistProvider.notifier).removeAthlete(list.id, athleteId);
+                                } else {
+                                  ref.read(shortlistProvider.notifier).addAthlete(list.id, athleteId);
+                                }
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(isAdded
+                                        ? 'Removed $athleteName from ${list.name}'
+                                        : 'Added $athleteName to ${list.name}'),
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+                const Divider(color: Colors.white24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create New Shortlist'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showCreateShortlistDialog(context, ref, athleteId, athleteName);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+void _showCreateShortlistDialog(BuildContext context, WidgetRef ref, String athleteId, String athleteName) {
+  final controller = TextEditingController();
+  showDialog(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Create Shortlist'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(
+          labelText: 'Shortlist Name',
+          hintText: 'e.g. Uganda U-17 Strikers',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            final name = controller.text.trim();
+            if (name.isNotEmpty) {
+              await ref.read(shortlistProvider.notifier).createShortlist(name);
+              final state = ref.read(shortlistProvider);
+              if (state.shortlists.isNotEmpty) {
+                final newList = state.shortlists.last;
+                await ref.read(shortlistProvider.notifier).addAthlete(newList.id, athleteId);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Added $athleteName to new shortlist $name'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            }
+          },
+          child: const Text('Create & Add'),
+        ),
+      ],
+    ),
+  );
 }
 
 class _RailBtn extends StatelessWidget {
@@ -678,25 +1165,26 @@ class _CategoryBarState extends State<_CategoryBar> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Progress dots (horizontal, bottom)
+// Progress dots (vertical, right side)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ProgressDots extends StatelessWidget {
+class _VerticalProgressDots extends StatelessWidget {
   final int count;
   final int current;
-  const _ProgressDots({required this.count, required this.current});
+  const _VerticalProgressDots({required this.count, required this.current});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: List.generate(count, (i) {
         final active = i == current;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: active ? 20 : 6,
-          height: 6,
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          width: 6,
+          height: active ? 20 : 6,
           decoration: BoxDecoration(
             color: active
                 ? Colors.white

@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/repositories/auth_repository.dart';
@@ -31,20 +33,52 @@ class AuthNotifier extends Notifier<AuthState> {
 
   AuthService get _authService => ref.read(authServiceProvider);
 
+  static const _cachedUserKey = 'cached_auth_user';
+
+  Future<void> _saveUserLocally(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cachedUserKey, jsonEncode(user.toJson()));
+  }
+
+  Future<void> _clearUserLocally() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_cachedUserKey);
+  }
+
+  Future<User?> _getCachedUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString(_cachedUserKey);
+      if (jsonStr != null) {
+        return User.fromJson(jsonDecode(jsonStr) as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Check existing session on app start.
   Future<void> checkSession() async {
     state = const AuthLoading();
+    final cached = await _getCachedUser();
+    if (cached != null) {
+      state = AuthAuthenticated(user: cached);
+    }
+
     try {
       final user = await _authService.getSession();
       if (user != null) {
         state = AuthAuthenticated(user: user);
+        await _saveUserLocally(user);
         await PushNotificationService.instance.registerToken(user.id);
         await ref.read(knownAccountsStoreProvider).remember(user);
       } else {
+        await _clearUserLocally();
         state = const AuthUnauthenticated();
       }
     } catch (_) {
-      state = const AuthUnauthenticated();
+      if (state is! AuthAuthenticated) {
+        state = const AuthUnauthenticated();
+      }
     }
   }
 
@@ -66,6 +100,7 @@ class AuthNotifier extends Notifier<AuthState> {
         dateOfBirth: dateOfBirth,
       );
       final user = await _authService.signUp(data);
+      await _saveUserLocally(user);
       state = AuthAuthenticated(user: user);
       await PushNotificationService.instance.registerToken(user.id);
       await ref.read(knownAccountsStoreProvider).remember(user);
@@ -85,6 +120,7 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final data = SignInData(email: email, password: password);
       final user = await _authService.signIn(data);
+      await _saveUserLocally(user);
       state = AuthAuthenticated(user: user);
       await PushNotificationService.instance.registerToken(user.id);
       await ref.read(knownAccountsStoreProvider).remember(user);
@@ -98,6 +134,7 @@ class AuthNotifier extends Notifier<AuthState> {
   /// Sign out the current user.
   Future<void> signOut() async {
     state = const AuthLoading();
+    await _clearUserLocally();
     await PushNotificationService.instance.unregisterToken();
     await _authService.signOut();
     state = const AuthUnauthenticated();

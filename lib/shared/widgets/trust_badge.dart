@@ -16,6 +16,9 @@ class TrustBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (level == TrustBadgeLevel.selfReported) {
+      return const SizedBox.shrink();
+    }
     final (label, color) = switch (level) {
       TrustBadgeLevel.selfReported => ('Self-Reported', AppColors.badgeSelf),
       TrustBadgeLevel.coachEndorsed => ('Coach-Endorsed', AppColors.badgeCoach),
@@ -38,12 +41,16 @@ class TrustBadge extends StatelessWidget {
         children: [
           Icon(Icons.verified, size: iconSize, color: color),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: fontSize,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

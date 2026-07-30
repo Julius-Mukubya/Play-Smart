@@ -92,7 +92,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
               Text('No pending requests', style: theme.textTheme.titleLarge),
               const SizedBox(height: 8),
               Text(
-                'Message requests from recruiters and clubs will appear here.',
+                'Friend requests from other users will appear here.',
                 style: theme.textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -131,7 +131,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(request.fromUserName, style: theme.textTheme.titleMedium),
-                          Text('Wants to connect', style: theme.textTheme.bodySmall),
+                          Text('Sent you a friend request', style: theme.textTheme.bodySmall),
                         ],
                       ),
                     ),

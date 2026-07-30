@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show FileOptions;
 
 /// Profile repository — Supabase-backed CRUD for `public.athletes`.
 ///
@@ -9,9 +12,28 @@ import 'package:play_smart/shared/types/domain_types.dart';
 /// geocoded server-side and likewise read-only from the client.
 class ProfileRepository {
   static const _table = 'athletes';
+  static const _avatarBucket = 'avatars';
   // Embeds achievements + content in the same query so screens that show a
   // full profile don't need a second round trip.
   static const _selectWithRelations = '*, achievements(*), athlete_content(*)';
+
+  /// Uploads a profile photo to `avatars/{userId}/{filename}` and returns
+  /// the public URL to store in `athletes.photo_url`. See
+  /// `supabase/migrations/0005_avatars_storage.sql` for the bucket/RLS setup
+  /// this depends on (owner-write, path-scoped by auth.uid()).
+  Future<String> uploadAvatar({
+    required String userId,
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    final path = '$userId/$filename';
+    await supabase.storage.from(_avatarBucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(upsert: true),
+        );
+    return supabase.storage.from(_avatarBucket).getPublicUrl(path);
+  }
 
   Future<List<Athlete>> getAllAthletes() async {
     final rows = await supabase.from(_table).select(_selectWithRelations);

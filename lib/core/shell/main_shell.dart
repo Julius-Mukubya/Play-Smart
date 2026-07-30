@@ -6,6 +6,21 @@ import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/notifications/providers/notification_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
+/// Which bottom-nav tab is currently visible. StatefulShellRoute keeps every
+/// branch mounted via IndexedStack, so a screen like Discover (autoplaying
+/// video) has no built-in signal that it's been navigated away from —
+/// widgets that need to pause/stop when off-screen should watch this.
+class ActiveShellTabIndexNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void set(int index) => state = index;
+}
+
+final activeShellTabIndexProvider = NotifierProvider<ActiveShellTabIndexNotifier, int>(
+  ActiveShellTabIndexNotifier.new,
+);
+
 /// Main app shell — persistent bottom navigation bar wrapping all main tab screens.
 /// Uses StatefulShellRoute so each tab preserves its own navigation stack.
 class MainShell extends ConsumerWidget {
@@ -20,6 +35,15 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final unreadCount = ref.watch(notificationProvider).unreadCount;
+
+    // Deferred to avoid "modify provider during build" — keeps
+    // activeShellTabIndexProvider in sync with the shell's actual current
+    // branch regardless of how navigation got there (tap, deep link, etc).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(activeShellTabIndexProvider) != navigationShell.currentIndex) {
+        ref.read(activeShellTabIndexProvider.notifier).set(navigationShell.currentIndex);
+      }
+    });
 
     // Determine user role for the contextual middle tab
     AccountRole role = AccountRole.athlete;

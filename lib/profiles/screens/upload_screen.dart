@@ -9,7 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/discovery/providers/discovery_provider.dart';
 import 'package:play_smart/profiles/providers/content_provider.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:v_video_compressor/v_video_compressor.dart';
 
@@ -32,6 +34,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   double _uploadProgress = 0.0;
   XFile? _pickedFile;
   Uint8List? _pickedBytes;
+  Uint8List? _pickedThumbnailBytes;
+
+  @override
+  void initState() {
+    super.initState();
+    // Upload is reachable directly from the bottom nav, so the profile may
+    // not have been loaded yet (normally done by MyProfileScreen).
+    Future.microtask(() => ref.read(profileProvider.notifier).loadMyProfile());
+  }
 
   @override
   void dispose() {
@@ -66,12 +77,14 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         }
       }
 
+      Uint8List? thumbnailBytes;
       if (_selectedType == ContentType.video && !kIsWeb) {
         // Compress on-device (native Media3/AVFoundation encoders, no
         // external service) before upload — same rationale as photos above.
         // Web has no native compressor, so raw bytes are kept there.
         if (!mounted) return;
         setState(() => _isCompressing = true);
+        var videoPathForThumbnail = file.path;
         try {
           final result = await VVideoCompressor().compressVideo(
             file.path,
@@ -79,9 +92,31 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           );
           if (result != null) {
             bytes = await File(result.compressedFilePath).readAsBytes();
+            videoPathForThumbnail = result.compressedFilePath;
           }
         } catch (_) {
           // keep original bytes
+        }
+        try {
+          // Powers the preview shown in content galleries (My Profile,
+          // Athlete Profile) — without this, ContentThumbnail falls back to
+          // a generic icon since AthleteContent.thumbnailUrl has nothing to
+          // point at.
+          final thumbnail = await VVideoCompressor().getVideoThumbnail(
+            videoPathForThumbnail,
+            const VVideoThumbnailConfig(
+              timeMs: 1000,
+              maxWidth: 480,
+              maxHeight: 480,
+              format: VThumbnailFormat.jpeg,
+              quality: 75,
+            ),
+          );
+          if (thumbnail != null) {
+            thumbnailBytes = await File(thumbnail.thumbnailPath).readAsBytes();
+          }
+        } catch (_) {
+          // no thumbnail — gallery falls back to a placeholder icon
         } finally {
           if (mounted) setState(() => _isCompressing = false);
         }
@@ -91,6 +126,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       setState(() {
         _pickedFile = file;
         _pickedBytes = bytes;
+        _pickedThumbnailBytes = thumbnailBytes;
       });
     } catch (e) {
       if (!mounted) return;
@@ -120,36 +156,58 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       _uploadProgress = 0.0;
     });
 
-    // Get current athlete ID from auth state
+    // Storage paths are scoped by the auth user id (RLS bucket policy checks
+    // the first path segment against auth.uid()); the DB row's athlete_id
+    // must be the athlete profile's own id, not the user id — they're
+    // different rows (public.athletes.id vs public.users.id).
     final authState = ref.read(authProvider);
-    String athleteId;
-    if (authState is AuthAuthenticated) {
-      athleteId = authState.user.id;
-    } else {
+    var athlete = ref.read(profileProvider).value;
+    if (athlete == null && authState is AuthAuthenticated) {
+      // Not loaded yet (e.g. Upload tapped directly from the bottom nav
+      // before the initState load finished) — fetch it now rather than
+      // wrongly telling an existing athlete to complete their profile.
+      await ref.read(profileProvider.notifier).loadMyProfile();
+      if (!mounted) return;
+      athlete = ref.read(profileProvider).value;
+    }
+    if (authState is! AuthAuthenticated || athlete == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You must be signed in to upload.')),
+          const SnackBar(content: Text('You must complete your profile before uploading.')),
         );
       }
       setState(() => _isUploading = false);
       return;
     }
+    final userId = authState.user.id;
+    final athleteId = athlete.id;
 
     try {
       String? fileUrl;
+      String? thumbnailUrl;
       if (_pickedBytes != null) {
         // Photos/videos are already compressed at pick time (see _pickFile)
         // — upload the (possibly compressed) bytes as-is.
         final uploadId = DateTime.now().millisecondsSinceEpoch.toString();
         final extension = _selectedType == ContentType.video ? 'mp4' : 'jpg';
         fileUrl = await ref.read(contentRepositoryProvider).uploadContentFile(
-              userId: athleteId,
+              userId: userId,
               contentId: uploadId,
               filename: '$uploadId.$extension',
               bytes: _pickedBytes!,
             );
         if (!mounted) return;
         setState(() => _uploadProgress = 0.7);
+
+        if (_pickedThumbnailBytes != null) {
+          thumbnailUrl = await ref.read(contentRepositoryProvider).uploadContentFile(
+                userId: userId,
+                contentId: uploadId,
+                filename: '$uploadId-thumb.jpg',
+                bytes: _pickedThumbnailBytes!,
+              );
+          if (!mounted) return;
+        }
       }
 
       final content = AthleteContent(
@@ -159,10 +217,21 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         fileUrl: fileUrl,
+        thumbnailUrl: thumbnailUrl,
         momentTag: _selectedMoment,
       );
 
       await ref.read(contentProvider.notifier).createContent(content);
+      // MyProfileScreen reads athlete.content from profileProvider (the
+      // embedded relation), not from contentProvider — refresh it so the
+      // gallery shows the new upload. The screen's own state persists across
+      // tab switches (StatefulShellRoute), so a stale profileProvider value
+      // wouldn't otherwise be refetched just by navigating back to it.
+      await ref.read(profileProvider.notifier).loadMyProfile();
+      // Same reasoning for the Discover feed — DiscoverScreen only loads
+      // once via its own initState, so without this the new post wouldn't
+      // show up there until the app restarts.
+      await ref.read(discoveryProvider.notifier).loadDiscoverFeed();
 
       if (!mounted) return;
       setState(() {

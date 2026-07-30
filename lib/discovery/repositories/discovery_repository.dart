@@ -40,9 +40,25 @@ class DiscoveryRepository {
     // Round-robin interleave so different athletes alternate in the feed.
     final List<FeedItem> feed = [];
     int maxLen = byAthlete.fold(0, (m, l) => l.length > m ? l.length : m);
+    int adCount = 1;
     for (int i = 0; i < maxLen; i++) {
       for (final list in byAthlete) {
-        if (i < list.length) feed.add(list[i]);
+        if (i < list.length) {
+          feed.add(list[i]);
+          if (feed.length % 3 == 2) {
+            feed.add(FeedItem(
+              isAd: true,
+              adTitle: adCount == 1 ? 'MTN Sports Uganda' : 'Nike Football Academy',
+              adDescription: adCount == 1
+                  ? 'Connect with MTN Sports for exclusive grassroots tournaments, kits, and training camps!'
+                  : 'Enroll in the Nike Elite Academy trials. Register now to showcase your skills to international scouts.',
+              adImageUrl: adCount == 1
+                  ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800'
+                  : 'https://images.unsplash.com/photo-1541252260730-0412e8e2108e?w=800',
+            ));
+            adCount = adCount == 1 ? 2 : 1;
+          }
+        }
       }
     }
 

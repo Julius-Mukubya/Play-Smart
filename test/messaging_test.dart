@@ -124,7 +124,7 @@ void main() {
       expect(service.canSendRequest(sender: sender, recipient: recipient), true);
     });
 
-    test('canSendRequest returns false for athlete sender', () {
+    test('canSendRequest returns true for athlete sender', () {
       final sender = User(
         id: 'athlete-1',
         name: 'John',
@@ -138,10 +138,10 @@ void main() {
         role: AccountRole.athlete,
       );
 
-      expect(service.canSendRequest(sender: sender, recipient: recipient), false);
+      expect(service.canSendRequest(sender: sender, recipient: recipient), true);
     });
 
-    test('canSendRequest returns false for unverified recruiter', () {
+    test('canSendRequest returns true for unverified recruiter', () {
       final sender = User(
         id: 'recruiter-2',
         name: 'Grace',
@@ -156,7 +156,7 @@ void main() {
         role: AccountRole.athlete,
       );
 
-      expect(service.canSendRequest(sender: sender, recipient: recipient), false);
+      expect(service.canSendRequest(sender: sender, recipient: recipient), true);
     });
 
     test('canReceiveRequest allows verified recruiter for under-18 athlete', () {

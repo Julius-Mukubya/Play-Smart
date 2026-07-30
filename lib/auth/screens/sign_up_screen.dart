@@ -88,30 +88,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Role selector
-                Text('I am a...', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 12),
-                _buildRoleChip(
-                  AccountRole.athlete,
-                  Icons.person,
-                  'Athlete',
-                  'Create a profile and get discovered',
-                ),
-                const SizedBox(height: 8),
-                _buildRoleChip(
-                  AccountRole.recruiter,
-                  Icons.search,
-                  'Recruiter or Scout',
-                  'Find and shortlist talent',
-                ),
-                const SizedBox(height: 8),
-                _buildRoleChip(
-                  AccountRole.club,
-                  Icons.business,
-                  'Club or Organisation',
-                  'Post trials and manage recruitment',
-                ),
-                const SizedBox(height: 24),
+
 
                 // Name
                 TextFormField(

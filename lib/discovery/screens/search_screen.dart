@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:play_smart/core/theme/app_theme.dart' as theme_colors;
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/widgets/athlete_card.dart';
+import 'package:play_smart/shared/widgets/athlete_grid_card.dart';
 
 /// Advanced search screen — recruiters and clubs only.
 /// Features filter panel, results list, and recommended feed.
@@ -94,6 +95,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               },
             ),
           ),
+          _CategoryBar(
+            onFilterChanged: (sport) {
+              final currentFilters = ref.read(discoveryProvider).filters;
+              if (sport == 'All') {
+                ref.read(discoveryProvider.notifier).updateFilters(
+                  currentFilters.copyWith(clearSport: true),
+                );
+              } else {
+                ref.read(discoveryProvider.notifier).updateFilters(
+                  currentFilters.copyWith(sport: sport),
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 8),
 
           // Results
           Expanded(
@@ -125,10 +141,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         onRefresh: () async {
                           await ref.read(discoveryProvider.notifier).search();
                         },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 16),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.68,
+                          ),
                           itemCount: state.athletes.length,
-                          itemBuilder: (ctx, i) => AthleteCard(
+                          itemBuilder: (ctx, i) => AthleteGridCard(
                             athlete: state.athletes[i],
                             showShortlistAction: true,
                           ),
@@ -334,4 +356,90 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 /// Private reference to AppColors for the filter badge.
 class AppColors {
   static const Color stateError = Color(0xFFE74C3C);
+}
+
+class _CategoryBar extends StatefulWidget {
+  final void Function(String sport) onFilterChanged;
+  const _CategoryBar({required this.onFilterChanged});
+
+  @override
+  State<_CategoryBar> createState() => _CategoryBarState();
+}
+
+class _CategoryBarState extends State<_CategoryBar> {
+  static const _categories = [
+    (label: 'All',        icon: Icons.auto_awesome),
+    (label: 'Football',   icon: Icons.sports_soccer),
+    (label: 'Netball',    icon: Icons.sports_basketball),
+    (label: 'Athletics',  icon: Icons.directions_run),
+    (label: 'Basketball', icon: Icons.sports_basketball),
+    (label: 'Rugby',      icon: Icons.sports_rugby),
+    (label: 'Swimming',   icon: Icons.pool),
+  ];
+
+  int _selected = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (_, i) {
+          final cat = _categories[i];
+          final active = _selected == i;
+          return GestureDetector(
+            onTap: () {
+              setState(() => _selected = i);
+              widget.onFilterChanged(cat.label);
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: active
+                    ? theme_colors.AppColors.accentPrimary
+                    : Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(
+                  color: active
+                      ? theme_colors.AppColors.accentPrimary
+                      : Colors.grey.withOpacity(0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(cat.icon,
+                      size: 16,
+                      color: active
+                          ? Colors.white
+                          : Colors.grey),
+                  const SizedBox(width: 6),
+                  Text(
+                    cat.label,
+                    style: TextStyle(
+                      color: active
+                          ? Colors.white
+                          : Colors.black87,
+                      fontSize: 14,
+                      fontWeight: active
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

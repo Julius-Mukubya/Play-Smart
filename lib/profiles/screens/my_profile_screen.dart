@@ -1,12 +1,17 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/app_dialog.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
+import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,10 +24,54 @@ class MyProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
+  bool _isUploadingAvatar = false;
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() => ref.read(profileProvider.notifier).loadMyProfile());
+  }
+
+  Future<void> _changeAvatar(Athlete athlete) async {
+    final authState = ref.read(authProvider);
+    if (authState is! AuthAuthenticated) return;
+
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(source: ImageSource.gallery);
+      if (file == null) return;
+
+      var bytes = await file.readAsBytes();
+      try {
+        bytes = await FlutterImageCompress.compressWithList(
+          bytes,
+          minWidth: 512,
+          minHeight: 512,
+          quality: 80,
+        );
+      } catch (_) {
+        // keep original bytes
+      }
+
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = true);
+
+      final url = await ref.read(profileRepositoryProvider).uploadAvatar(
+            userId: authState.user.id,
+            filename: 'avatar.jpg',
+            bytes: bytes,
+          );
+      await ref.read(profileProvider.notifier).updateProfile(athlete.copyWith(photoUrl: url));
+
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingAvatar = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update profile picture: $e')),
+      );
+    }
   }
 
   @override
@@ -355,20 +404,17 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   letterSpacing: 0.5,
                 )),
           ),
-          _ActionTile(
-            icon: Icons.bookmark_outline,
-            label: 'My Shortlists',
-            onTap: () => context.push(AppRouter.shortlists),
-          ),
+          if ((user?.role == AccountRole.recruiter || user?.role == AccountRole.club) &&
+              user?.verificationStatus != VerificationStatus.approved)
+            _ActionTile(
+              icon: Icons.verified_outlined,
+              label: 'Apply for Verification',
+              onTap: () => context.push(AppRouter.verification),
+            ),
           _ActionTile(
             icon: Icons.notifications_outlined,
             label: 'Notifications',
             onTap: () => context.push(AppRouter.notifications),
-          ),
-          _ActionTile(
-            icon: Icons.credit_card_outlined,
-            label: 'Billing & Subscription',
-            onTap: () => context.push(AppRouter.billing),
           ),
           _ActionTile(
             icon: Icons.shield_outlined,
@@ -442,16 +488,59 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
             padding: const EdgeInsets.all(24),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    athlete.displayName.isNotEmpty
-                        ? athlete.displayName[0].toUpperCase()
-                        : '?',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
+                GestureDetector(
+                  onTap: _isUploadingAvatar ? null : () => _changeAvatar(athlete),
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        backgroundImage: athlete.photoUrl != null
+                            ? CachedNetworkImageProvider(athlete.photoUrl!)
+                            : null,
+                        child: athlete.photoUrl == null
+                            ? Text(
+                                athlete.displayName.isNotEmpty
+                                    ? athlete.displayName[0].toUpperCase()
+                                    : '?',
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_isUploadingAvatar)
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: theme.colorScheme.surface, width: 2),
+                            ),
+                            child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -544,37 +633,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (ctx, i) {
                     final content = athlete.content[i];
-                    return Container(
-                      width: 140,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            content.type == ContentType.video
-                                ? Icons.videocam
-                                : content.type == ContentType.photo
-                                    ? Icons.photo
-                                    : Icons.article,
-                            size: 32,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(height: 8),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            child: Text(
-                              content.title,
-                              style: theme.textTheme.bodySmall,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                    return ContentThumbnail(
+                      content: content,
+                      onDelete: () => _confirmDeleteContent(context, content),
                     );
                   },
                 ),
@@ -635,19 +696,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                 )),
           ),
           _ActionTile(
-            icon: Icons.bookmark_outline,
-            label: 'My Shortlists',
-            onTap: () => context.push(AppRouter.shortlists),
-          ),
-          _ActionTile(
             icon: Icons.notifications_outlined,
             label: 'Notifications',
             onTap: () => context.push(AppRouter.notifications),
-          ),
-          _ActionTile(
-            icon: Icons.credit_card_outlined,
-            label: 'Billing & Subscription',
-            onTap: () => context.push(AppRouter.billing),
           ),
           _ActionTile(
             icon: Icons.shield_outlined,
@@ -719,6 +770,35 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _confirmDeleteContent(BuildContext context, AthleteContent content) {
+    AppDialog.show(
+      context,
+      icon: Icons.delete_outline_rounded,
+      iconColor: AppColors.stateError,
+      title: 'Remove Post',
+      body: 'Remove "${content.title}" from your profile? This cannot be undone.',
+      confirmLabel: 'Remove',
+      cancelLabel: 'Keep It',
+      destructive: true,
+      onConfirm: () async {
+        try {
+          await ref
+              .read(contentRepositoryProvider)
+              .deleteContent(content.id);
+          // Same reason as after upload: MyProfileScreen reads athlete.content
+          // from profileProvider (the embedded relation), not contentProvider.
+          await ref.read(profileProvider.notifier).loadMyProfile();
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not remove post: $e')),
+            );
+          }
+        }
+      },
     );
   }
 

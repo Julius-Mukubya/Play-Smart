@@ -95,6 +95,11 @@ class AuthRepository {
 
   Future<User> _fetchProfile(String userId) async {
     final row = await supabase.from('users').select().eq('id', userId).single();
+    if (row['is_banned'] == true) {
+      await supabase.auth.signOut();
+      _cachedUser = null;
+      throw AuthException('This account has been suspended. Contact support for help.');
+    }
     return User.fromJson(row);
   }
 

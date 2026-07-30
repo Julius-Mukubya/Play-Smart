@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Recruiter/Club verification submission screen.
@@ -77,7 +79,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isRecruiter = true; // In real app, determine from user role
+    final authState = ref.watch(authProvider);
+    final isRecruiter = authState is AuthAuthenticated && authState.user.role == AccountRole.recruiter;
 
     return Scaffold(
       appBar: AppBar(

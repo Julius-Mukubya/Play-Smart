@@ -213,6 +213,18 @@ class User {
         isUnder18: json['is_under_18'] as bool? ?? false,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'role': role.name,
+        'verification_status': verificationStatus.name,
+        'subscription_tier': subscriptionTier.toDb(),
+        'date_of_birth': dateOfBirth?.toIso8601String(),
+        'is_under_18': isUnder18,
+        'created_at': createdAt.toIso8601String(),
+      };
 }
 
 /// Athlete achievement with trust badge level.
@@ -379,6 +391,32 @@ class Athlete {
         profileCompleteness: (json['profile_completeness'] as num?)?.toDouble() ?? 0.0,
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
+      );
+
+  Athlete copyWith({String? photoUrl}) => Athlete(
+        id: id,
+        userId: userId,
+        displayName: displayName,
+        photoUrl: photoUrl ?? this.photoUrl,
+        sports: sports,
+        positions: positions,
+        age: age,
+        height: height,
+        weight: weight,
+        dominantFootHand: dominantFootHand,
+        currentTeam: currentTeam,
+        country: country,
+        city: city,
+        bio: bio,
+        lat: lat,
+        lng: lng,
+        availabilityStatus: availabilityStatus,
+        achievements: achievements,
+        content: content,
+        profileBadgeLevel: profileBadgeLevel,
+        profileCompleteness: profileCompleteness,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
       );
 }
 

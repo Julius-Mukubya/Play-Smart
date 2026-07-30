@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
+import 'package:play_smart/messaging/providers/messaging_provider.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:play_smart/shared/widgets/app_dialog.dart';
+import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 
 /// Athlete Profile — public view seen by recruiters, clubs, and guests.
 class AthleteProfileScreen extends ConsumerStatefulWidget {
@@ -100,9 +106,6 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                 // Trust badge
                 _buildTrustBadge(athlete.profileBadgeLevel),
                 const SizedBox(height: 8),
-                // Availability
-                _buildAvailabilityBadge(athlete.availabilityStatus),
-                const SizedBox(height: 8),
                 if (athlete.country != null || athlete.city != null)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -126,15 +129,34 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.message_outlined),
-                  label: const Text('Send Expression of Interest'),
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.bookmark_border),
-                  label: const Text('Shortlist'),
+                  onPressed: () async {
+                    final messagingState = ref.read(messagingProvider);
+                    final isFriend = messagingState.conversations.any((c) =>
+                        c.fromUserId == athlete.userId || c.toUserId == athlete.userId);
+                    if (isFriend) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('You are already connected/friends.'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                      return;
+                    }
+                    final err = await ref.read(messagingProvider.notifier).sendRequest(
+                          athlete.userId,
+                          "Friend Request",
+                        );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(err ?? 'Friend Request Sent Successfully!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: const Text('Send Friend Request'),
                 ),
               ],
             ),
@@ -156,32 +178,38 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
               ),
             ),
 
-          // Stats
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Stats', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _buildStatChip('Age', '${athlete.age ?? '-'}'),
-                    if (athlete.height != null)
-                      _buildStatChip('Height', '${athlete.height} cm'),
-                    if (athlete.weight != null)
-                      _buildStatChip('Weight', '${athlete.weight} kg'),
-                    if (athlete.dominantFootHand != null)
-                      _buildStatChip('Dominant', athlete.dominantFootHand!),
-                    if (athlete.currentTeam != null)
-                      _buildStatChip('Team', athlete.currentTeam!),
-                  ],
-                ),
-              ],
+          // Stats — only shown when at least one is actually provided.
+          if (athlete.age != null ||
+              athlete.height != null ||
+              athlete.weight != null ||
+              athlete.dominantFootHand != null ||
+              athlete.currentTeam != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Stats', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      if (athlete.age != null)
+                        _buildStatChip('Age', '${athlete.age}'),
+                      if (athlete.height != null)
+                        _buildStatChip('Height', '${athlete.height} cm'),
+                      if (athlete.weight != null)
+                        _buildStatChip('Weight', '${athlete.weight} kg'),
+                      if (athlete.dominantFootHand != null)
+                        _buildStatChip('Dominant', athlete.dominantFootHand!),
+                      if (athlete.currentTeam != null)
+                        _buildStatChip('Team', athlete.currentTeam!),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
 
           const SizedBox(height: 24),
 
@@ -233,45 +261,22 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                       separatorBuilder: (_, __) => const SizedBox(width: 12),
                       itemBuilder: (ctx, i) {
                         final content = athlete.content[i];
-                        return Container(
+                        return ContentThumbnail(
+                          content: content,
                           width: 160,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                content.type == ContentType.video
-                                    ? Icons.videocam
-                                    : content.type == ContentType.photo
-                                        ? Icons.photo
-                                        : Icons.article,
-                                size: 40,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Text(
-                                  content.title,
-                                  style: theme.textTheme.bodyMedium,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              if (content.momentTag != null)
-                                Chip(
+                          onDelete: _isOwnProfile(athlete)
+                              ? () => _confirmDeleteContent(context, content)
+                              : null,
+                          momentChip: content.momentTag != null
+                              ? Chip(
                                   label: Text(
                                     content.momentTag!.name.toUpperCase(),
                                     style: const TextStyle(fontSize: 10),
                                   ),
                                   visualDensity: VisualDensity.compact,
-                                ),
-                            ],
-                          ),
+                                  backgroundColor: Colors.white.withValues(alpha: 0.9),
+                                )
+                              : null,
                         );
                       },
                     ),
@@ -281,6 +286,36 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  bool _isOwnProfile(Athlete athlete) {
+    final authState = ref.read(authProvider);
+    return authState is AuthAuthenticated && authState.user.id == athlete.userId;
+  }
+
+  void _confirmDeleteContent(BuildContext context, AthleteContent content) {
+    AppDialog.show(
+      context,
+      icon: Icons.delete_outline_rounded,
+      iconColor: AppColors.stateError,
+      title: 'Remove Post',
+      body: 'Remove "${content.title}" from your profile? This cannot be undone.',
+      confirmLabel: 'Remove',
+      cancelLabel: 'Keep It',
+      destructive: true,
+      onConfirm: () async {
+        try {
+          await ref.read(contentRepositoryProvider).deleteContent(content.id);
+          await ref.read(profileProvider.notifier).loadAthleteProfile(widget.athleteId);
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not remove post: $e')),
+            );
+          }
+        }
+      },
     );
   }
 
