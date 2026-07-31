@@ -534,6 +534,40 @@ class Opportunity {
         isClosed: json['is_closed'] as bool? ?? false,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
+
+  Opportunity copyWith({
+    String? id,
+    String? creatorId,
+    AccountRole? creatorRole,
+    String? title,
+    String? sport,
+    String? position,
+    String? location,
+    DateTime? date,
+    int? minAge,
+    int? maxAge,
+    String? description,
+    int? capacity,
+    int? applicationCount,
+    bool? isClosed,
+    DateTime? createdAt,
+  }) => Opportunity(
+        id: id ?? this.id,
+        creatorId: creatorId ?? this.creatorId,
+        creatorRole: creatorRole ?? this.creatorRole,
+        title: title ?? this.title,
+        sport: sport ?? this.sport,
+        position: position ?? this.position,
+        location: location ?? this.location,
+        date: date ?? this.date,
+        minAge: minAge ?? this.minAge,
+        maxAge: maxAge ?? this.maxAge,
+        description: description ?? this.description,
+        capacity: capacity ?? this.capacity,
+        applicationCount: applicationCount ?? this.applicationCount,
+        isClosed: isClosed ?? this.isClosed,
+        createdAt: createdAt ?? this.createdAt,
+      );
 }
 
 /// Application to an opportunity.
@@ -570,6 +604,24 @@ class Application {
         status: json['status'] as String? ?? 'pending',
         createdAt: DateTime.parse(json['created_at'] as String),
       );
+
+  Application copyWith({
+    String? id,
+    String? opportunityId,
+    String? athleteId,
+    String? athleteName,
+    String? message,
+    String? status,
+    DateTime? createdAt,
+  }) => Application(
+        id: id ?? this.id,
+        opportunityId: opportunityId ?? this.opportunityId,
+        athleteId: athleteId ?? this.athleteId,
+        athleteName: athleteName ?? this.athleteName,
+        message: message ?? this.message,
+        status: status ?? this.status,
+        createdAt: createdAt ?? this.createdAt,
+      );
 }
 
 /// Message request (before conversation opens).
@@ -603,6 +655,26 @@ class MessageRequest {
         accepted: json['accepted'] as bool? ?? false,
         requiresMonitoring: json['requires_monitoring'] as bool? ?? false,
         createdAt: DateTime.parse(json['created_at'] as String),
+      );
+
+  MessageRequest copyWith({
+    String? id,
+    String? fromUserId,
+    String? fromUserName,
+    String? toUserId,
+    String? message,
+    bool? accepted,
+    bool? requiresMonitoring,
+    DateTime? createdAt,
+  }) => MessageRequest(
+        id: id ?? this.id,
+        fromUserId: fromUserId ?? this.fromUserId,
+        fromUserName: fromUserName ?? this.fromUserName,
+        toUserId: toUserId ?? this.toUserId,
+        message: message ?? this.message,
+        accepted: accepted ?? this.accepted,
+        requiresMonitoring: requiresMonitoring ?? this.requiresMonitoring,
+        createdAt: createdAt ?? this.createdAt,
       );
 }
 
@@ -665,6 +737,26 @@ class AppNotification {
         relatedId: json['related_id'] as String?,
         read: json['read'] as bool? ?? false,
         createdAt: DateTime.parse(json['created_at'] as String),
+      );
+
+  AppNotification copyWith({
+    String? id,
+    String? userId,
+    NotificationType? type,
+    String? title,
+    String? body,
+    String? relatedId,
+    bool? read,
+    DateTime? createdAt,
+  }) => AppNotification(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        type: type ?? this.type,
+        title: title ?? this.title,
+        body: body ?? this.body,
+        relatedId: relatedId ?? this.relatedId,
+        read: read ?? this.read,
+        createdAt: createdAt ?? this.createdAt,
       );
 }
 

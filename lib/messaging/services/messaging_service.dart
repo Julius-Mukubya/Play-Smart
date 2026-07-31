@@ -50,4 +50,7 @@ class MessagingService {
   bool requiresMonitoring(User athlete) {
     return athlete.isUnder18;
   }
+
+  Future<void> onMessageRequestSent(MessageRequest request) async {}
+  Future<void> onMessageRequestAccepted(MessageRequest request) async {}
 }
