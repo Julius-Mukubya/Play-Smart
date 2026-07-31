@@ -4,6 +4,8 @@ import 'package:play_smart/core/theme/app_theme.dart' as theme_colors;
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/athlete_grid_card.dart';
+import 'package:play_smart/shared/widgets/content_thumbnail.dart';
+import 'package:go_router/go_router.dart';
 
 /// Advanced search screen — recruiters and clubs only.
 /// Features filter panel, results list, and recommended feed.

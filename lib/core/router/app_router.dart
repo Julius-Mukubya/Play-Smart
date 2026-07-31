@@ -11,6 +11,9 @@ import 'package:play_smart/profiles/screens/athlete_profile_screen.dart';
 import 'package:play_smart/admin/screens/verification_screen.dart';
 import 'package:play_smart/profiles/screens/athlete_setup_screen.dart';
 import 'package:play_smart/profiles/screens/my_profile_screen.dart';
+import 'package:play_smart/profiles/screens/edit_profile_screen.dart';
+import 'package:play_smart/profiles/screens/saved_content_screen.dart';
+import 'package:play_smart/profiles/screens/your_content_screen.dart';
 import 'package:play_smart/profiles/screens/upload_screen.dart';
 import 'package:play_smart/discovery/screens/discover_screen.dart';
 import 'package:play_smart/discovery/screens/search_screen.dart';
@@ -48,8 +51,11 @@ class AppRouter {
   static const String search = '/search';
   static const String athleteProfile = '/athlete/:id';
   static const String myProfile = '/profile';
+  static const String editProfile = '/profile/edit';
   static const String upload = '/upload';
   static const String shortlists = '/shortlists';
+  static const String myContent = '/profile/content';
+  static const String saved = '/profile/saved';
   static const String opportunities = '/opportunities';
   static const String messages = '/messages';
   static const String notifications = '/notifications';
@@ -101,6 +107,8 @@ class AppRouter {
         path: billing,
         builder: (_, __) => const BillingScreen(),
       ),
+
+
 
       // ── Shortlists (top-level so it can be pushed from anywhere) ─────────
       GoRoute(
@@ -172,6 +180,18 @@ class AppRouter {
                   GoRoute(
                     path: 'billing',
                     builder: (_, __) => const BillingScreen(),
+                  ),
+                  GoRoute(
+                    path: 'saved',
+                    builder: (_, __) => const SavedContentScreen(),
+                  ),
+                  GoRoute(
+                    path: 'content',
+                    builder: (_, __) => const YourContentScreen(),
+                  ),
+                  GoRoute(
+                    path: 'edit',
+                    builder: (_, __) => const EditProfileScreen(),
                   ),
                 ],
               ),

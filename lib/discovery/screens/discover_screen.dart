@@ -13,6 +13,7 @@ import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
+import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 
 /// Discover screen — horizontal PageView, one full-screen card per swipe.
@@ -27,6 +28,9 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -38,6 +42,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -91,21 +96,99 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           top: 0,
           left: 0,
           right: 0,
-          child: _TopBar(),
-        ),
-
-        // ── Right progress dots (vertical, right side) ──────────────────
-        Positioned(
-          right: 12,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: _VerticalProgressDots(
-              count: state.feedItems.length.clamp(0, 10),
-              current: _currentPage.clamp(0, state.feedItems.length - 1),
-            ),
+          child: _TopBar(
+            isSearching: _isSearching,
+            searchController: _searchController,
+            onSearchChanged: (val) => setState(() => _searchQuery = val),
+            onToggleSearch: () => setState(() {
+              _isSearching = !_isSearching;
+              if (!_isSearching) {
+                _searchQuery = '';
+                _searchController.clear();
+              }
+            }),
+            onOpenSaved: () => _showSavedContentSheet(context, ref),
           ),
         ),
+
+        // Search dropdown overlay
+        if (_isSearching && _searchQuery.isNotEmpty)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 64,
+            left: 16,
+            right: 16,
+            child: Card(
+              color: const Color(0xFF1E293B),
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Container(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: Consumer(
+                  builder: (context, ref, _) {
+                    final query = _searchQuery.toLowerCase();
+                    final results = state.feedItems.where((item) {
+                      if (item.isAd) return false;
+                      final title = item.content?.title.toLowerCase() ?? '';
+                      final description = item.content?.description.toLowerCase() ?? '';
+                      return title.contains(query) || description.contains(query);
+                    }).toList();
+
+                    if (results.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(
+                          'No matching videos found.',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: results.length,
+                      itemBuilder: (ctx, idx) {
+                        final item = results[idx];
+                        return ListTile(
+                          leading: Icon(
+                            item.content?.type == ContentType.video
+                                ? Icons.videocam
+                                : item.content?.type == ContentType.photo
+                                    ? Icons.photo
+                                    : Icons.article,
+                            color: Colors.blueAccent,
+                          ),
+                          title: Text(
+                            item.content?.title ?? '',
+                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            item.athlete?.displayName ?? '',
+                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                          onTap: () {
+                            final feedIndex = state.feedItems.indexOf(item);
+                            if (feedIndex != -1) {
+                              _pageController.jumpToPage(feedIndex);
+                            }
+                            setState(() {
+                              _isSearching = false;
+                              _searchQuery = '';
+                              _searchController.clear();
+                            });
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+
+
       ],
     );
   }
@@ -328,7 +411,7 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
               child: IgnorePointer(
                 child: ScaleTransition(
                   scale: _heartScale,
-                  child: const Icon(Icons.favorite,
+                  child: const Icon(Icons.thumb_up,
                       color: Colors.white, size: 100,
                       shadows: [
                         Shadow(color: Colors.black45, blurRadius: 20)
@@ -558,104 +641,55 @@ class _AthleteStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final athlete = item.athlete!;
-    final content = item.content!;
-
-    const avatarColumnWidth = 58.0; // avatar diameter (48) + spacing (10)
-
-    return GestureDetector(
-      onTap: () => context.push('/athlete/${athlete.id}'),
-      child: Padding(
+    if (item.isAd) {
+      return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Row 1: avatar + name + trust badge only — the availability
-            // pill used to compete with these for the same line and was
-            // forcing everything to squeeze/truncate.
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.accentPrimary,
-                  child: Text(
-                    athlete.displayName.isNotEmpty
-                        ? athlete.displayName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 19),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(athlete.displayName,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15),
-                      overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: TrustBadge(level: athlete.profileBadgeLevel, size: BadgeSize.sm),
-                ),
-              ],
+            Text(
+              item.adTitle ?? 'Sponsored',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
             ),
-            const SizedBox(height: 6),
-            // Row 2: sport/position/city + availability, indented to align
-            // under the name rather than the avatar.
-            Row(
-              children: [
-                const SizedBox(width: avatarColumnWidth),
-                Expanded(
-                  child: Text(
-                    [
-                      athlete.sports.isNotEmpty ? athlete.sports.first : null,
-                      athlete.positions.isNotEmpty ? athlete.positions.first : null,
-                      athlete.city,
-                    ].whereType<String>().join(' · '),
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7), fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                 const SizedBox(width: 8),
-              ],
+            const SizedBox(height: 4),
+            Text(
+              item.adDescription ?? '',
+              style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const SizedBox(width: avatarColumnWidth),
-                Icon(Icons.favorite_rounded, size: 13, color: Colors.white.withValues(alpha: 0.8)),
-                const SizedBox(width: 4),
-                Text(
-                  '${item.likeCount + (isLiked ? 1 : 0)} likes',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(width: 14),
-                Icon(Icons.chat_bubble_rounded, size: 12, color: Colors.white.withValues(alpha: 0.8)),
-                const SizedBox(width: 4),
-                Text(
-                  '${item.commentCount} comments',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            if (content.type != ContentType.post) ...[
-              const SizedBox(height: 8),
-              Text(content.title,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-            ],
           ],
         ),
+      );
+    }
+    final content = item.content!;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (content.type != ContentType.post)
+            Text(
+              content.title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
     );
   }
@@ -672,32 +706,88 @@ class _ActionRail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (item.isAd) return const SizedBox.shrink();
     final likeCount = item.likeCount + (isLiked ? 1 : 0);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         _RailBtn(
-          icon: isLiked ? Icons.favorite : Icons.favorite_border,
+          icon: isLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
           label: _fmt(likeCount),
-          color: isLiked ? Colors.redAccent : Colors.white,
-          onTap: () => ref
-              .read(discoveryProvider.notifier)
-              .toggleLike(item.content!.id),
+          color: isLiked ? Colors.blueAccent : Colors.white,
+          onTap: () {
+            if (_ensureAuthenticated(context, ref)) {
+              ref.read(discoveryProvider.notifier).toggleLike(item.content!.id);
+            }
+          },
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
         _RailBtn(
           icon: Icons.chat_bubble_outline_rounded,
           label: _fmt(item.commentCount),
           color: Colors.white,
-          onTap: () => _showCommentsSheet(context, item),
+          onTap: () {
+            if (_ensureAuthenticated(context, ref)) {
+              _showCommentsSheet(context, item);
+            }
+          },
         ),
-        const SizedBox(height: 22),
+        const SizedBox(height: 14),
         _RailBtn(
-          icon: Icons.person_add_outlined,
-          label: 'Profile',
+          icon: Icons.share_rounded,
+          label: 'Share',
           color: Colors.white,
-          onTap: () => context.push('/athlete/${item.athlete!.id}'),
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Link copied to clipboard! Ready to share.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        (() {
+          final isBookmarked = ref.watch(discoveryProvider).bookmarkedContentIds.contains(item.content!.id);
+          return _RailBtn(
+            icon: isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+            label: 'Save',
+            color: isBookmarked ? Colors.amber : Colors.white,
+            onTap: () {
+              if (_ensureAuthenticated(context, ref)) {
+                ref.read(discoveryProvider.notifier).toggleBookmark(item.content!.id);
+              }
+            },
+          );
+        }()),
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: () {
+            if (_ensureAuthenticated(context, ref)) {
+              context.push('/athlete/${item.athlete!.id}');
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: AppColors.accentPrimary,
+              child: Text(
+                item.athlete!.displayName.isNotEmpty
+                    ? item.athlete!.displayName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -1015,9 +1105,23 @@ class _RailBtn extends StatelessWidget {
 // Top bar
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TopBar extends StatelessWidget {
+class _TopBar extends ConsumerWidget {
+  final bool isSearching;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onToggleSearch;
+  final VoidCallback onOpenSaved;
+
+  const _TopBar({
+    required this.isSearching,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onToggleSearch,
+    required this.onOpenSaved,
+  });
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 4,
@@ -1035,33 +1139,158 @@ class _TopBar extends StatelessWidget {
           ],
         ),
       ),
-      child: Row(
-        children: [
-          const Text('Play',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800)),
-          Text('Smart',
-              style: TextStyle(
-                  color: AppColors.accentLight,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800)),
-          const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded,
-                color: Colors.white, size: 26),
-            onPressed: () => context.push(AppRouter.notifications),
-          ),
-          IconButton(
-            icon: const Icon(Icons.search_rounded,
-                color: Colors.white, size: 26),
-            onPressed: () => context.go(AppRouter.search),
-          ),
-        ],
-      ),
+      child: isSearching
+          ? Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  onPressed: onToggleSearch,
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    decoration: const InputDecoration(
+                      hintText: 'Search videos...',
+                      hintStyle: TextStyle(color: Colors.white54),
+                      border: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                    ),
+                    onChanged: onSearchChanged,
+                  ),
+                ),
+                if (searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, color: Colors.white),
+                    onPressed: () {
+                      searchController.clear();
+                      onSearchChanged('');
+                    },
+                  ),
+              ],
+            )
+          : Row(
+              children: [
+                const Text('Play',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+                Text('Smart',
+                    style: TextStyle(
+                        color: AppColors.accentLight,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.bookmark_border_rounded,
+                      color: Colors.white, size: 26),
+                  onPressed: () {
+                    if (_ensureAuthenticated(context, ref)) {
+                      onOpenSaved();
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.notifications_none_rounded,
+                      color: Colors.white, size: 26),
+                  onPressed: () {
+                    if (_ensureAuthenticated(context, ref)) {
+                      context.push(AppRouter.notifications);
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.search_rounded,
+                      color: Colors.white, size: 26),
+                  onPressed: onToggleSearch,
+                ),
+              ],
+            ),
     );
   }
+}
+
+void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: const Color(0xFF1E293B),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      return Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(discoveryProvider);
+          final savedItems = state.feedItems.where((item) {
+            if (item.isAd) return false;
+            return state.bookmarkedContentIds.contains(item.content!.id);
+          }).toList();
+
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: SizedBox(
+              height: 400,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Saved Videos & Content',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: savedItems.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No saved items yet.',
+                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                            ),
+                          )
+                        : GridView.builder(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 10,
+                              mainAxisSpacing: 10,
+                              childAspectRatio: 0.8,
+                            ),
+                            itemCount: savedItems.length,
+                            itemBuilder: (ctx, idx) {
+                              final item = savedItems[idx];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  context.push('/athlete/${item.athlete!.id}');
+                                },
+                                child: ContentThumbnail(
+                                  content: item.content!,
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1323,4 +1552,32 @@ class _ErrorView extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _ensureAuthenticated(BuildContext context, WidgetRef ref) {
+  final authState = ref.read(authProvider);
+  if (authState is! AuthAuthenticated) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign In Required'),
+        content: const Text('You need to sign in to perform this action.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/signin');
+            },
+            child: const Text('Sign In'),
+          ),
+        ],
+      ),
+    );
+    return false;
+  }
+  return true;
 }

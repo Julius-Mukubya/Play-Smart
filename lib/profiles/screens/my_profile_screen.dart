@@ -14,6 +14,7 @@ import 'package:play_smart/core/theme/app_theme.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/discovery/providers/discovery_provider.dart';
 
 /// Athlete's own profile — view, edit controls, and content management.
 class MyProfileScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class MyProfileScreen extends ConsumerStatefulWidget {
 
 class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
   bool _isUploadingAvatar = false;
+  ContentType? _contentFilter;
 
   @override
   void initState() {
@@ -86,7 +88,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Edit profile',
-            onPressed: () => context.push(AppRouter.athleteSetup),
+            onPressed: () => context.push(AppRouter.editProfile),
           ),
         ],
       ),
@@ -218,7 +220,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
       destructive: true,
       onConfirm: () {
         ref.read(authProvider.notifier).signOut().then((_) {
-          if (context.mounted) context.go(AppRouter.landing);
+          if (context.mounted) context.go(AppRouter.discover);
         });
       },
     );
@@ -396,14 +398,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           const SizedBox(height: 16),
 
           // ── More section ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text('More',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: AppColors.textMuted,
-                  letterSpacing: 0.5,
-                )),
-          ),
+          const SizedBox(height: 8),
           if ((user?.role == AccountRole.recruiter || user?.role == AccountRole.club) &&
               user?.verificationStatus != VerificationStatus.approved)
             _ActionTile(
@@ -559,7 +554,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () => context.push(AppRouter.athleteSetup),
+                  onPressed: () => context.push(AppRouter.editProfile),
                   icon: const Icon(Icons.edit, size: 18),
                   label: const Text('Edit'),
                 ),
@@ -585,115 +580,17 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
           const Divider(),
 
           // Content upload button
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Your Content', style: theme.textTheme.titleLarge),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 48,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => context.go(AppRouter.upload),
-                        icon: const Icon(Icons.videocam, size: 18),
-                        label: const Text('Video'),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => context.go(AppRouter.upload),
-                        icon: const Icon(Icons.photo, size: 18),
-                        label: const Text('Photo'),
-                      ),
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () => context.go(AppRouter.upload),
-                        icon: const Icon(Icons.article, size: 18),
-                        label: const Text('Post'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Content gallery
-          if (athlete.content.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SizedBox(
-                height: 160,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: athlete.content.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (ctx, i) {
-                    final content = athlete.content[i];
-                    return ContentThumbnail(
-                      content: content,
-                      onDelete: () => _confirmDeleteContent(context, content),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-          const SizedBox(height: 24),
-
-          // Achievements section
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Achievements', style: theme.textTheme.titleLarge),
-                    TextButton.icon(
-                      onPressed: () => _showAddAchievementDialog(context, theme),
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (athlete.achievements.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Text(
-                        'No achievements yet. Add your first achievement to build your profile.',
-                        style: theme.textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                else
-                  ...athlete.achievements.map((ach) => _buildAchievementCard(theme, ach)),
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
-
           // ── More section ────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text('More',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: AppColors.textMuted,
-                  letterSpacing: 0.5,
-                )),
+          const SizedBox(height: 16),
+          _ActionTile(
+            icon: Icons.video_library_outlined,
+            label: 'Your Content',
+            onTap: () => context.push(AppRouter.myContent),
+          ),
+          _ActionTile(
+            icon: Icons.bookmark_border_rounded,
+            label: 'Saved Content',
+            onTap: () => context.push(AppRouter.saved),
           ),
           _ActionTile(
             icon: Icons.notifications_outlined,
@@ -863,6 +760,70 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
         )),
         Text(label, style: theme.textTheme.bodySmall),
       ],
+    );
+  }
+
+  Widget _buildAllFilterChip() {
+    final isSelected = _contentFilter == null;
+    return ChoiceChip(
+      avatar: Icon(
+        Icons.select_all_rounded,
+        size: 16,
+        color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary,
+      ),
+      label: Text(
+        'All',
+        style: TextStyle(
+          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _contentFilter = null;
+          });
+        }
+      },
+      selectedColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(ContentType type, IconData icon, String label) {
+    final isSelected = _contentFilter == type;
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: isSelected ? Colors.white : Theme.of(context).colorScheme.primary,
+      ),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (val) {
+        setState(() {
+          _contentFilter = val ? type : null;
+        });
+      },
+      selectedColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
     );
   }
 }

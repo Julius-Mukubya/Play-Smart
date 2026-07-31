@@ -1,13 +1,16 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
 
 /// Grid-tile variant of AthleteCard — a photo-forward card for use in
 /// GridView-based results (search). AthleteCard's horizontal list-tile
 /// layout stays as-is for shortlists/discover.
-class AthleteGridCard extends StatelessWidget {
+class AthleteGridCard extends ConsumerWidget {
   final Athlete athlete;
   final bool showShortlistAction;
   final bool isShortlisted;
@@ -22,14 +25,40 @@ class AthleteGridCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: () => context.push('/athlete/${athlete.id}'),
+        onTap: () {
+          final authState = ref.read(authProvider);
+          if (authState is! AuthAuthenticated) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Sign In Required'),
+                content: const Text('You need to sign in to view athlete profiles.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      context.push('/signin');
+                    },
+                    child: const Text('Sign In'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            context.push('/athlete/${athlete.id}');
+          }
+        },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -52,7 +81,33 @@ class AthleteGridCard extends StatelessWidget {
                       top: 6,
                       right: 6,
                       child: GestureDetector(
-                        onTap: onShortlist,
+                        onTap: () {
+                          final authState = ref.read(authProvider);
+                          if (authState is! AuthAuthenticated) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Sign In Required'),
+                                content: const Text('You need to sign in to perform this action.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.pop(ctx);
+                                      context.push('/signin');
+                                    },
+                                    child: const Text('Sign In'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            if (onShortlist != null) onShortlist!();
+                          }
+                        },
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: const BoxDecoration(

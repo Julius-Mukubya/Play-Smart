@@ -35,7 +35,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (authState is AuthAuthenticated) {
         context.go(AppRouter.discover);
       } else if (authState is AuthUnauthenticated) {
-        context.go(AppRouter.signIn);
+        context.go(AppRouter.discover);
       }
     });
 

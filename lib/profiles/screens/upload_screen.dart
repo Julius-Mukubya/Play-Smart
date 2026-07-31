@@ -54,10 +54,21 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   Future<void> _pickFile() async {
     final picker = ImagePicker();
     try {
-      final file = _selectedType == ContentType.video
-          ? await picker.pickVideo(source: ImageSource.gallery)
-          : await picker.pickImage(source: ImageSource.gallery);
+      final file = await picker.pickMedia();
       if (file == null) return;
+
+      final path = file.path.toLowerCase();
+      final isVideo = path.endsWith('.mp4') ||
+          path.endsWith('.mov') ||
+          path.endsWith('.avi') ||
+          path.endsWith('.mkv') ||
+          path.endsWith('.webm') ||
+          path.endsWith('.3gp');
+
+      setState(() {
+        _selectedType = isVideo ? ContentType.video : ContentType.photo;
+      });
+
       var bytes = await file.readAsBytes();
 
       if (_selectedType == ContentType.photo) {
@@ -272,88 +283,64 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Media type selector
-              Text('Content Type', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildTypeChip(ContentType.video, Icons.videocam, 'Video'),
-                  const SizedBox(width: 8),
-                  _buildTypeChip(ContentType.photo, Icons.photo, 'Photo'),
-                  const SizedBox(width: 8),
-                  _buildTypeChip(ContentType.post, Icons.article, 'Post'),
-                ],
-              ),
-              const SizedBox(height: 24),
-
               // File picker area
-              if (_selectedType != ContentType.post)
-                InkWell(
-                  onTap: _isCompressing ? null : _pickFile,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    height: 200,
-                    decoration: BoxDecoration(
+              InkWell(
+                onTap: _isCompressing ? null : _pickFile,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: _pickedFile != null
+                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                        : theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: _pickedFile != null
-                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-                          : theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _pickedFile != null
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant,
-                        style: BorderStyle.solid,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_isCompressing) ...[
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 12),
-                          Text('Compressing video...', style: theme.textTheme.titleMedium),
-                        ] else if (_selectedType == ContentType.photo && _pickedBytes != null)
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.memory(_pickedBytes!, fit: BoxFit.cover, width: double.infinity),
-                            ),
-                          )
-                        else ...[
-                          Icon(
-                            _pickedFile != null
-                                ? Icons.check_circle
-                                : _selectedType == ContentType.video
-                                    ? Icons.videocam
-                                    : Icons.photo_library,
-                            size: 48,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _pickedFile != null
-                                ? _pickedFile!.name
-                                : _selectedType == ContentType.video
-                                    ? 'Tap to select video'
-                                    : 'Tap to select photo',
-                            style: theme.textTheme.titleMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          if (_selectedType == ContentType.video && _pickedFile == null)
-                            Text(
-                              'MP4, max 100MB. Compressed automatically.',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          if (_selectedType == ContentType.photo && _pickedFile == null)
-                            Text(
-                              'JPG, PNG. Max 10MB.',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                        ],
-                      ],
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                      style: BorderStyle.solid,
                     ),
                   ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_isCompressing) ...[
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 12),
+                        Text('Compressing video...', style: theme.textTheme.titleMedium),
+                      ] else if (_selectedType == ContentType.photo && _pickedBytes != null)
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.memory(_pickedBytes!, fit: BoxFit.cover, width: double.infinity),
+                          ),
+                        )
+                      else ...[
+                        Icon(
+                          _pickedFile != null
+                              ? Icons.check_circle
+                              : Icons.perm_media_outlined,
+                          size: 48,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _pickedFile != null
+                              ? _pickedFile!.name
+                              : 'Tap to select photo or video',
+                          style: theme.textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_pickedFile == null)
+                          Text(
+                            'Supports MP4, JPG, PNG.',
+                            style: theme.textTheme.bodySmall,
+                          ),
+                      ],
+                    ],
+                  ),
                 ),
+              ),
               const SizedBox(height: 24),
 
               // Title
@@ -375,51 +362,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                   hintText: 'Tell viewers what this is about...',
                   prefixIcon: Icon(Icons.description),
                 ),
-                maxLines: 3,
+                maxLines: 6,
               ),
-              const SizedBox(height: 24),
-
-              // Moment tag selector
-              Text('Moment Type (optional)', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: MomentType.values.map((moment) {
-                  final selected = _selectedMoment == moment;
-                  final (icon, label) = _momentMeta(moment);
-                  return ChoiceChip(
-                    avatar: Icon(icon, size: 18),
-                    label: Text(label),
-                    selected: selected,
-                    onSelected: (val) =>
-                        setState(() => _selectedMoment = val ? moment : null),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-
-              // Compression note for videos
-              if (_selectedType == ContentType.video)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.compress, color: theme.colorScheme.onTertiaryContainer),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Videos will be compressed for optimal playback on mobile connections.',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               const SizedBox(height: 24),
 
               // Upload progress
@@ -496,13 +440,4 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     );
   }
 
-  (IconData, String) _momentMeta(MomentType moment) {
-    return switch (moment) {
-      MomentType.goal => (Icons.sports_soccer, 'Goal'),
-      MomentType.assist => (Icons.handshake, 'Assist'),
-      MomentType.sprint => (Icons.directions_run, 'Sprint'),
-      MomentType.tackle => (Icons.shield, 'Tackle'),
-      MomentType.save => (Icons.sports_handball, 'Save'),
-    };
-  }
 }

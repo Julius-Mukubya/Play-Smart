@@ -10,7 +10,7 @@ import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/app_dialog.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 
-/// Athlete Profile — public view seen by recruiters, clubs, and guests.
+/// Athlete Profile — unified public view seen by recruiters, clubs, and guests.
 class AthleteProfileScreen extends ConsumerStatefulWidget {
   final String athleteId;
   const AthleteProfileScreen({super.key, required this.athleteId});
@@ -20,6 +20,8 @@ class AthleteProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
+  ContentType? _contentFilter;
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +35,7 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Athlete Profile'),
+        title: const Text('User Profile'),
         actions: [
           IconButton(
             icon: const Icon(Icons.share),
@@ -55,17 +57,28 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
   }
 
   Widget _buildProfileContent(BuildContext context, ThemeData theme, Athlete athlete) {
+    final sportsLabel = athlete.sports.isNotEmpty ? athlete.sports.join(', ') : 'User';
+
+    // Calculate metrics
+    final videoCount = athlete.content.where((c) => c.type == ContentType.video).length;
+    final postCount = athlete.content.where((c) => c.type == ContentType.post).length;
+    
+    // Calculate mock/active friends count
+    final activeFriends = ref.watch(messagingProvider).conversations.where((c) =>
+        c.fromUserId == athlete.userId || c.toUserId == athlete.userId).length;
+    final totalFriends = activeFriends + 4; // Mock standard baseline friends count
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header section
+          // Header section with profile details
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  theme.colorScheme.primary.withValues(alpha: 0.1),
+                  theme.colorScheme.primary.withValues(alpha: 0.08),
                   theme.colorScheme.surface,
                 ],
                 begin: Alignment.topCenter,
@@ -87,205 +100,253 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(athlete.displayName, style: theme.textTheme.headlineMedium),
+                Text(
+                  athlete.displayName.toUpperCase(),
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  athlete.sports.join(', '),
+                  sportsLabel,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  athlete.positions.join(', '),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                if (athlete.positions.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    athlete.positions.join(', '),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                // Trust badge
+                ],
+                const SizedBox(height: 12),
                 _buildTrustBadge(athlete.profileBadgeLevel),
-                const SizedBox(height: 8),
-                if (athlete.country != null || athlete.city != null)
+                if (athlete.city != null || athlete.country != null) ...[
+                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.location_on_outlined, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        [athlete.city, athlete.country].where((e) => e != null).join(', '),
+                        [athlete.city, athlete.country].whereType<String>().join(', '),
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
 
-          // Action buttons
+          // Unified Metrics Row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final messagingState = ref.read(messagingProvider);
-                    final isFriend = messagingState.conversations.any((c) =>
-                        c.fromUserId == athlete.userId || c.toUserId == athlete.userId);
-                    if (isFriend) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('You are already connected/friends.'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                      return;
-                    }
-                    final err = await ref.read(messagingProvider.notifier).sendRequest(
-                          athlete.userId,
-                          "Friend Request",
-                        );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(err ?? 'Friend Request Sent Successfully!'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('Send Friend Request'),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildMetricItem(theme, 'Videos', '$videoCount'),
+                  Container(width: 1, height: 32, color: theme.colorScheme.outlineVariant),
+                  _buildMetricItem(theme, 'Posts', '$postCount'),
+                  Container(width: 1, height: 32, color: theme.colorScheme.outlineVariant),
+                  _buildMetricItem(theme, 'Friends', '$totalFriends'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Primary Actions
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final messagingState = ref.read(messagingProvider);
+                final isFriend = messagingState.conversations.any((c) =>
+                    c.fromUserId == athlete.userId || c.toUserId == athlete.userId);
+                if (isFriend) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You are already connected/friends.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
+                final err = await ref.read(messagingProvider.notifier).sendRequest(
+                      athlete.userId,
+                      "Friend Request",
+                    );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(err ?? 'Friend Request Sent Successfully!'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: const Text('Send Friend Request'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
 
-          const Divider(),
+          const Divider(height: 32),
 
-          // Bio
-          if (athlete.bio != null && athlete.bio!.isNotEmpty)
+          // About/Bio
+          if (athlete.bio != null && athlete.bio!.isNotEmpty) ...[
             Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('About', style: theme.textTheme.titleLarge),
                   const SizedBox(height: 8),
-                  Text(athlete.bio!, style: theme.textTheme.bodyLarge),
+                  Text(
+                    athlete.bio!,
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                  ),
                 ],
               ),
             ),
+            const Divider(height: 32),
+          ],
 
-          // Stats — only shown when at least one is actually provided.
-          if (athlete.age != null ||
-              athlete.height != null ||
-              athlete.weight != null ||
-              athlete.dominantFootHand != null ||
-              athlete.currentTeam != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Stats', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
+          // Content library with choice chip filters
+          Padding(
+            padding: const EdgeInsets.only(left: 24, right: 24, bottom: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Content Library', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 12),
+                
+                // Filters row
+                SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
                     children: [
-                      if (athlete.age != null)
-                        _buildStatChip('Age', '${athlete.age}'),
-                      if (athlete.height != null)
-                        _buildStatChip('Height', '${athlete.height} cm'),
-                      if (athlete.weight != null)
-                        _buildStatChip('Weight', '${athlete.weight} kg'),
-                      if (athlete.dominantFootHand != null)
-                        _buildStatChip('Dominant', athlete.dominantFootHand!),
-                      if (athlete.currentTeam != null)
-                        _buildStatChip('Team', athlete.currentTeam!),
+                      _buildFilterChip('All', null),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Videos', ContentType.video),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Photos', ContentType.photo),
+                      const SizedBox(width: 8),
+                      _buildFilterChip('Posts', ContentType.post),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
+                const SizedBox(height: 16),
 
-          const SizedBox(height: 24),
+                // Grid view content rendering
+                (() {
+                  final filtered = athlete.content.where((c) {
+                    if (_contentFilter == null) return true;
+                    return c.type == _contentFilter;
+                  }).toList();
 
-          // Achievements
-          if (athlete.achievements.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Achievements', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  ...athlete.achievements.map((ach) => Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: _buildBadgeIcon(ach.badgeLevel),
-                          title: Text(ach.title),
-                          subtitle: ach.description.isNotEmpty
-                              ? Text(ach.description)
-                              : null,
-                          trailing: ach.endorsedByName != null
-                              ? Text(
-                                  ach.endorsedByName!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      )),
-                ],
-              ),
+                  if (filtered.isNotEmpty) {
+                    return SizedBox(
+                      height: 170,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder: (ctx, i) {
+                          final content = filtered[i];
+                          return ContentThumbnail(
+                            content: content,
+                            width: 130,
+                            onDelete: _isOwnProfile(athlete)
+                                ? () => _confirmDeleteContent(context, content)
+                                : null,
+                          );
+                        },
+                      ),
+                    );
+                  } else {
+                    return Container(
+                      height: 100,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        athlete.content.isEmpty
+                            ? 'No content uploaded yet'
+                            : 'No matching items found',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    );
+                  }
+                }()),
+              ],
             ),
-
-          // Content
-          if (athlete.content.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Content', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: athlete.content.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
-                      itemBuilder: (ctx, i) {
-                        final content = athlete.content[i];
-                        return ContentThumbnail(
-                          content: content,
-                          width: 160,
-                          onDelete: _isOwnProfile(athlete)
-                              ? () => _confirmDeleteContent(context, content)
-                              : null,
-                          momentChip: content.momentTag != null
-                              ? Chip(
-                                  label: Text(
-                                    content.momentTag!.name.toUpperCase(),
-                                    style: const TextStyle(fontSize: 10),
-                                  ),
-                                  visualDensity: VisualDensity.compact,
-                                  backgroundColor: Colors.white.withValues(alpha: 0.9),
-                                )
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, ContentType? type) {
+    final isSelected = _contentFilter == type;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _contentFilter = type;
+          });
+        }
+      },
+      selectedColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricItem(ThemeData theme, String label, String count) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+      ],
     );
   }
 
@@ -328,59 +389,18 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified, size: 16, color: color),
+          Icon(Icons.verified, size: 14, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
       ),
     );
-  }
-
-  Widget _buildAvailabilityBadge(AvailabilityStatus status) {
-    final (label, color) = switch (status) {
-      AvailabilityStatus.openToTrials => ('Open to Trials', AppColors.stateSuccess),
-      AvailabilityStatus.currentlyContracted => ('Currently Contracted', AppColors.stateWarning),
-      AvailabilityStatus.notAvailable => ('Not Available', AppColors.stateError),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12)),
-    );
-  }
-
-  Widget _buildStatChip(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(value, style: Theme.of(context).textTheme.titleMedium),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBadgeIcon(TrustBadgeLevel level) {
-    final color = switch (level) {
-      TrustBadgeLevel.selfReported => AppColors.badgeSelf,
-      TrustBadgeLevel.coachEndorsed => AppColors.badgeCoach,
-      TrustBadgeLevel.clubVerified => AppColors.badgeClub,
-    };
-    return Icon(Icons.verified, color: color);
   }
 }

@@ -75,6 +75,7 @@ class DiscoveryState {
   final List<Athlete> athletes;
   final List<FeedItem> feedItems;
   final Set<String> likedContentIds;  // content IDs the current user has liked
+  final Set<String> bookmarkedContentIds; // content IDs the current user has bookmarked
   final bool isLoading;
   final String? error;
   final SearchFilters filters;
@@ -83,6 +84,7 @@ class DiscoveryState {
     this.athletes = const [],
     this.feedItems = const [],
     this.likedContentIds = const {},
+    this.bookmarkedContentIds = const {},
     this.isLoading = false,
     this.error,
     this.filters = const SearchFilters(),
@@ -92,6 +94,7 @@ class DiscoveryState {
     List<Athlete>? athletes,
     List<FeedItem>? feedItems,
     Set<String>? likedContentIds,
+    Set<String>? bookmarkedContentIds,
     bool? isLoading,
     String? error,
     SearchFilters? filters,
@@ -101,6 +104,7 @@ class DiscoveryState {
       athletes: athletes ?? this.athletes,
       feedItems: feedItems ?? this.feedItems,
       likedContentIds: likedContentIds ?? this.likedContentIds,
+      bookmarkedContentIds: bookmarkedContentIds ?? this.bookmarkedContentIds,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
       filters: filters ?? this.filters,
@@ -146,6 +150,20 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
 
   /// Whether a content item is liked by the current user.
   bool isLiked(String contentId) => state.likedContentIds.contains(contentId);
+
+  /// Toggle bookmark on a content item.
+  void toggleBookmark(String contentId) {
+    final bookmarks = Set<String>.from(state.bookmarkedContentIds);
+    if (bookmarks.contains(contentId)) {
+      bookmarks.remove(contentId);
+    } else {
+      bookmarks.add(contentId);
+    }
+    state = state.copyWith(bookmarkedContentIds: bookmarks);
+  }
+
+  /// Whether a content item is bookmarked by the current user.
+  bool isBookmarked(String contentId) => state.bookmarkedContentIds.contains(contentId);
 
   /// Search athletes with current filters.
   Future<void> search() async {

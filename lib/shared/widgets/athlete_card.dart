@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/models/auth_state.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
 
 /// Shared AthleteCard component used across the app.
 /// Summary card for an athlete — used in discover feed, search results, shortlists.
-class AthleteCard extends StatelessWidget {
+class AthleteCard extends ConsumerWidget {
   final Athlete athlete;
   final bool showShortlistAction;
   final bool isShortlisted;
@@ -21,13 +24,39 @@ class AthleteCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
-        onTap: () => context.push('/athlete/${athlete.id}'),
+        onTap: () {
+          final authState = ref.read(authProvider);
+          if (authState is! AuthAuthenticated) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Sign In Required'),
+                content: const Text('You need to sign in to view athlete profiles.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      context.push('/signin');
+                    },
+                    child: const Text('Sign In'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            context.push('/athlete/${athlete.id}');
+          }
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -97,7 +126,33 @@ class AthleteCard extends StatelessWidget {
                         ? theme.colorScheme.primary
                         : theme.colorScheme.outline,
                   ),
-                  onPressed: onShortlist,
+                  onPressed: () {
+                    final authState = ref.read(authProvider);
+                    if (authState is! AuthAuthenticated) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Sign In Required'),
+                          content: const Text('You need to sign in to perform this action.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                context.push('/signin');
+                              },
+                              child: const Text('Sign In'),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      if (onShortlist != null) onShortlist!();
+                    }
+                  },
                 ),
             ],
           ),

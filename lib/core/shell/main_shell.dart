@@ -57,7 +57,7 @@ class MainShell extends ConsumerWidget {
       body: SizedBox.expand(child: navigationShell),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: navigationShell.currentIndex,
-        onTap: (index) => _onTap(context, index),
+        onTap: (index) => _onTap(context, ref, index),
         items: tabs,
         type: BottomNavigationBarType.fixed,
       ),
@@ -119,7 +119,33 @@ class MainShell extends ConsumerWidget {
     ];
   }
 
-  void _onTap(BuildContext context, int index) {
+  void _onTap(BuildContext context, WidgetRef ref, int index) {
+    if (index == 1 || index == 2 || index == 3 || index == 4) {
+      final authState = ref.read(authProvider);
+      if (authState is! AuthAuthenticated) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Sign In Required'),
+            content: const Text('You need to sign in to access this section of the app.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.push('/signin');
+                },
+                child: const Text('Sign In'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
     // goBranch keeps each tab's own navigation stack alive
     navigationShell.goBranch(
       index,

@@ -62,6 +62,8 @@ class AuthNotifier extends Notifier<AuthState> {
     final cached = await _getCachedUser();
     if (cached != null) {
       state = AuthAuthenticated(user: cached);
+    } else {
+      state = const AuthUnauthenticated();
     }
 
     try {
