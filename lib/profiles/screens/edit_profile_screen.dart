@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
-import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -91,23 +89,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         );
       }
 
-      // 2. Update Supabase Auth email / password
-      final emailVal = _emailController.text.trim();
-      final passwordVal = _passwordController.text.trim();
-
-      if (emailVal != authState.user.email || passwordVal.isNotEmpty) {
-        await supabase.auth.updateUser(
-          UserAttributes(
-            email: emailVal != authState.user.email ? emailVal : null,
-            password: passwordVal.isNotEmpty ? passwordVal : null,
-          ),
-        );
-      }
-
-      // 3. Update public users database profile row
-      await supabase.from('users').update({
-        'name': _nameController.text.trim(),
-      }).eq('id', authState.user.id);
+      // 2. Update Auth credentials and public user attributes (Mock)
+      // TODO: Wire up with Firebase Auth / Firestore when initialized
 
       // 4. Update athletes database table row
       final updatedAthlete = profile.copyWith(

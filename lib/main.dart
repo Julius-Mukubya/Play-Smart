@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/core/push/push_notification_service.dart';
 import 'package:play_smart/core/router/app_router.dart';
-import 'package:play_smart/core/supabase/supabase_config.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseConfig.initialize();
   // No-ops safely until `flutterfire configure` has been run — see
   // PushNotificationService's doc comment.
   await PushNotificationService.instance.initialize();
