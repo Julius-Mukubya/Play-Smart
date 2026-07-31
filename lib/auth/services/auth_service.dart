@@ -19,6 +19,11 @@ class AuthService {
     return _repository.signIn(data);
   }
 
+  /// Sign in with Google.
+  Future<User> signInWithGoogle() async {
+    return _repository.signInWithGoogle();
+  }
+
   /// Sign out the current user.
   Future<void> signOut() async {
     await _repository.signOut();

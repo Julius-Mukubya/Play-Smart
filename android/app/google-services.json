@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "711252118138",
+    "project_id": "play-smart-92ef4",
+    "storage_bucket": "play-smart-92ef4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:711252118138:android:5404332deb3360e5ec09c3",
+        "android_client_info": {
+          "package_name": "com.elitescout.play_smart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqZiyJmijr_XjGRrLN7Ah6GLqukjLxMrQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

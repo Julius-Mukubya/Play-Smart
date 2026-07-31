@@ -133,6 +133,22 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Sign in with Google.
+  Future<void> signInWithGoogle() async {
+    state = const AuthLoading();
+    try {
+      final user = await _authService.signInWithGoogle();
+      await _saveUserLocally(user);
+      state = AuthAuthenticated(user: user);
+      await PushNotificationService.instance.registerToken(user.id);
+      await ref.read(knownAccountsStoreProvider).remember(user);
+    } on AuthException catch (e) {
+      state = AuthError(message: e.message);
+    } catch (_) {
+      state = const AuthError(message: 'Google Sign-In failed. Please try again.');
+    }
+  }
+
   /// Sign out the current user.
   Future<void> signOut() async {
     state = const AuthLoading();

@@ -1,7 +1,8 @@
 import 'dart:typed_data';
+import 'package:play_smart/core/storage/cloudflare_storage_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
-/// Mock/In-memory Profile repository — ready to be wired up with Firebase Firestore & Cloudflare R2.
+/// Profile repository integrated with Cloudflare R2 Storage.
 class ProfileRepository {
   final Map<String, Athlete> _athletes = {};
 
@@ -10,8 +11,15 @@ class ProfileRepository {
     required String filename,
     required Uint8List bytes,
   }) async {
-    // Return dummy URL
-    return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150';
+    // Determine content type extension
+    final ext = filename.split('.').last.toLowerCase();
+    final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
+    
+    return CloudflareStorageService.upload(
+      path: 'avatars/$userId/$filename',
+      bytes: bytes,
+      contentType: contentType,
+    );
   }
 
   Future<List<Athlete>> getAllAthletes() async {

@@ -1,8 +1,1 @@
-{
-  "firestore": {
-    "database": "(default)",
-    "location": "nam5",
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  }
-}
+{"firestore":{"database":"(default)","location":"nam5","rules":"firestore.rules","indexes":"firestore.indexes.json"},"flutter":{"platforms":{"android":{"default":{"projectId":"play-smart-92ef4","appId":"1:711252118138:android:5404332deb3360e5ec09c3","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"play-smart-92ef4","configurations":{"android":"1:711252118138:android:5404332deb3360e5ec09c3","ios":"1:711252118138:ios:da790de203f80a6aec09c3","web":"1:711252118138:web:9183915707991cb0ec09c3"}}}}}}

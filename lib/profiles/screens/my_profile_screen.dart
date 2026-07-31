@@ -570,9 +570,9 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickStat(theme, Icons.visibility_outlined, 'Profile Views', '12'),
-                _buildQuickStat(theme, Icons.bookmark_outlined, 'Shortlisted', '3'),
-                _buildQuickStat(theme, Icons.message_outlined, 'Messages', '2'),
+                _buildQuickStat(theme, Icons.visibility_outlined, 'Profile Views', '0'),
+                _buildQuickStat(theme, Icons.bookmark_outlined, 'Shortlisted', '0'),
+                _buildQuickStat(theme, Icons.message_outlined, 'Messages', '0'),
               ],
             ),
           ),

@@ -9,11 +9,11 @@ class AnalyticsRepository {
   }) async {}
 
   Future<int> getViewCount(String athleteId) async {
-    return 12;
+    return 0;
   }
 
   Future<int> getShortlistCount(String athleteId) async {
-    return 3;
+    return 0;
   }
 
   Future<List<AnalyticsEvent>> getFullAnalytics(String athleteId) async {

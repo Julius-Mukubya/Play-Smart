@@ -1,7 +1,8 @@
 import 'dart:typed_data';
+import 'package:play_smart/core/storage/cloudflare_storage_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
-/// Mock/In-memory Content repository — ready to be wired up with Firebase Firestore & Cloudflare R2.
+/// Content repository integrated with Cloudflare R2 Storage.
 class ContentRepository {
   final List<AthleteContent> _content = [];
 
@@ -15,8 +16,14 @@ class ContentRepository {
     required String filename,
     required Uint8List bytes,
   }) async {
-    // Return dummy URL
-    return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+    final ext = filename.split('.').last.toLowerCase();
+    final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'png' ? 'image/png' : 'image/jpeg');
+
+    return CloudflareStorageService.upload(
+      path: 'content/$userId/$contentId/$filename',
+      bytes: bytes,
+      contentType: contentType,
+    );
   }
 
   Future<AthleteContent> createContent(AthleteContent content) async {

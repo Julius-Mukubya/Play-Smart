@@ -220,6 +220,42 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                // OR Divider
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: theme.textTheme.bodySmall),
+                    ),
+                    Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Google Button
+                OutlinedButton.icon(
+                  onPressed: authState is AuthLoading
+                      ? null
+                      : () async {
+                          await ref.read(authProvider.notifier).signInWithGoogle();
+                          final state = ref.read(authProvider);
+                          if (state is AuthAuthenticated && context.mounted) {
+                            context.go(AppRouter.discover);
+                          }
+                        },
+                  icon: Image.asset(
+                    'lib/assets/images/google_logo.png',
+                    height: 20,
+                  ),
+                  label: const Text('Continue with Google'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // Sign In prompt
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
