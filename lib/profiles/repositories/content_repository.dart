@@ -1,8 +1,8 @@
 import 'dart:typed_data';
-import 'package:play_smart/core/storage/cloudflare_storage_service.dart';
+import 'package:play_smart/core/storage/firebase_storage_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
-/// Content repository integrated with Cloudflare R2 Storage.
+/// Content repository integrated with Firebase Storage.
 class ContentRepository {
   final List<AthleteContent> _content = [];
 
@@ -19,7 +19,7 @@ class ContentRepository {
     final ext = filename.split('.').last.toLowerCase();
     final contentType = ext == 'mp4' ? 'video/mp4' : (ext == 'png' ? 'image/png' : 'image/jpeg');
 
-    return CloudflareStorageService.upload(
+    return FirebaseStorageService.upload(
       path: 'content/$userId/$contentId/$filename',
       bytes: bytes,
       contentType: contentType,

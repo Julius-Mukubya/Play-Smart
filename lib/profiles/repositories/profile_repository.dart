@@ -1,8 +1,8 @@
 import 'dart:typed_data';
-import 'package:play_smart/core/storage/cloudflare_storage_service.dart';
+import 'package:play_smart/core/storage/firebase_storage_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
-/// Profile repository integrated with Cloudflare R2 Storage.
+/// Profile repository integrated with Firebase Storage.
 class ProfileRepository {
   final Map<String, Athlete> _athletes = {};
 
@@ -15,7 +15,7 @@ class ProfileRepository {
     final ext = filename.split('.').last.toLowerCase();
     final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
     
-    return CloudflareStorageService.upload(
+    return FirebaseStorageService.upload(
       path: 'avatars/$userId/$filename',
       bytes: bytes,
       contentType: contentType,
