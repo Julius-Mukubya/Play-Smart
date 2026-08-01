@@ -147,6 +147,19 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     }
   }
 
+  void _clearFields() {
+    _titleController.clear();
+    _descriptionController.clear();
+    setState(() {
+      _selectedMoment = null;
+      _pickedFile = null;
+      _pickedBytes = null;
+      _pickedThumbnailBytes = null;
+      _uploadProgress = 0.0;
+      _isUploading = false;
+    });
+  }
+
   Future<void> _handleUpload() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -245,10 +258,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       await ref.read(discoveryProvider.notifier).loadDiscoverFeed();
 
       if (!mounted) return;
-      setState(() {
-        _uploadProgress = 1.0;
-        _isUploading = false;
-      });
+      _clearFields();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -256,7 +266,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           backgroundColor: Colors.green,
         ),
       );
-      context.go(AppRouter.myProfile);
+      context.go(AppRouter.myContent);
     } catch (e) {
       if (!mounted) return;
       setState(() => _isUploading = false);
