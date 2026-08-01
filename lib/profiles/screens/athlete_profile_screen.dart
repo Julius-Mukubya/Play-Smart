@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
+import 'package:play_smart/messaging/models/connection_model.dart';
 import 'package:play_smart/messaging/providers/messaging_provider.dart';
+import 'package:play_smart/messaging/repositories/connection_repository.dart';
 import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
@@ -171,39 +174,82 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
           // Primary Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: ElevatedButton.icon(
-              onPressed: () async {
-                final messagingState = ref.read(messagingProvider);
-                final isFriend = messagingState.conversations.any((c) =>
-                    c.fromUserId == athlete.userId || c.toUserId == athlete.userId);
-                if (isFriend) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('You are already connected/friends.'),
-                      behavior: SnackBarBehavior.floating,
+            child: Consumer(
+              builder: (context, ref, _) {
+                final authState = ref.watch(authProvider);
+                final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;
+                final connectionRepo = ref.watch(connectionRepositoryProvider);
+
+                if (currentUserId == null) {
+                  return ElevatedButton.icon(
+                    onPressed: () => context.push('/signin'),
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    label: const Text('Sign in to Connect'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   );
-                  return;
                 }
-                final err = await ref.read(messagingProvider.notifier).sendRequest(
-                      athlete.userId,
-                      "Friend Request",
+
+                return FutureBuilder(
+                  future: connectionRepo.getRequestStatus(currentUserId, athlete.userId),
+                  builder: (context, snap) {
+                    final req = snap.data;
+                    final isPending = req != null && req.status == ConnectionStatus.pending;
+                    final isAccepted = req != null && req.status == ConnectionStatus.accepted;
+
+                    if (isAccepted) {
+                      return OutlinedButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.check_circle, color: Colors.green),
+                        label: const Text('Connected / Friends'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      );
+                    }
+
+                    if (isPending) {
+                      return OutlinedButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.hourglass_top_rounded, color: Colors.orange),
+                        label: const Text('Request Sent'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      );
+                    }
+
+                    return ElevatedButton.icon(
+                      onPressed: () async {
+                        await connectionRepo.sendRequest(currentUserId, athlete.userId);
+                        await ref.read(messagingProvider.notifier).sendRequest(
+                          athlete.userId,
+                          "Friend Request",
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Friend Request Sent Successfully!'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          setState(() {});
+                        }
+                      },
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      label: const Text('Send Friend Request'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
                     );
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(err ?? 'Friend Request Sent Successfully!'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
+                  },
+                );
               },
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: const Text('Send Friend Request'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
             ),
           ),
 

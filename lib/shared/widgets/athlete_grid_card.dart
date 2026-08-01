@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/trust_badge.dart';
 
@@ -35,26 +36,7 @@ class AthleteGridCard extends ConsumerWidget {
         onTap: () {
           final authState = ref.read(authProvider);
           if (authState is! AuthAuthenticated) {
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: const Text('Sign In Required'),
-                content: const Text('You need to sign in to view athlete profiles.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(ctx);
-                      context.push('/signin');
-                    },
-                    child: const Text('Sign In'),
-                  ),
-                ],
-              ),
-            );
+            context.push(AppRouter.auth);
           } else {
             context.push('/athlete/${athlete.id}');
           }
@@ -84,26 +66,7 @@ class AthleteGridCard extends ConsumerWidget {
                         onTap: () {
                           final authState = ref.read(authProvider);
                           if (authState is! AuthAuthenticated) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Sign In Required'),
-                                content: const Text('You need to sign in to perform this action.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(ctx);
-                                      context.push('/signin');
-                                    },
-                                    child: const Text('Sign In'),
-                                  ),
-                                ],
-                              ),
-                            );
+                            context.push(AppRouter.auth);
                           } else {
                             if (onShortlist != null) onShortlist!();
                           }

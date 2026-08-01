@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/core/router/app_router.dart';
-import 'package:play_smart/profiles/repositories/profile_repository.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shortlisting/providers/shortlist_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/athlete_card.dart';
@@ -16,7 +16,6 @@ class ShortlistScreen extends ConsumerStatefulWidget {
 }
 
 class _ShortlistScreenState extends ConsumerState<ShortlistScreen> {
-  final ProfileRepository _profileRepo = ProfileRepository();
 
   @override
   void initState() {
@@ -168,9 +167,9 @@ class _ShortlistScreenState extends ConsumerState<ShortlistScreen> {
     }
 
     // Resolve athlete profiles for display
+    final profileRepo = ref.read(profileRepositoryProvider);
     final athletes = shortlist.athleteIds
-        .map((id) => _profileRepo.getAthleteById(id))
-        .where((a) => a != null)
+        .map((id) => profileRepo.getAthleteById(id))
         .cast<Athlete>()
         .toList();
 

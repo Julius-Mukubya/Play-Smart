@@ -7,6 +7,13 @@ import 'package:play_smart/auth/repositories/known_accounts_store.dart';
 import 'package:play_smart/auth/services/auth_service.dart';
 import 'package:play_smart/core/push/push_notification_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
+import 'package:play_smart/discovery/providers/discovery_provider.dart';
+import 'package:play_smart/messaging/providers/messaging_provider.dart';
+import 'package:play_smart/notifications/providers/notification_provider.dart';
+import 'package:play_smart/opportunities/providers/opportunity_provider.dart';
+import 'package:play_smart/shortlisting/providers/shortlist_provider.dart';
 
 /// Auth repository provider.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
@@ -155,6 +162,16 @@ class AuthNotifier extends Notifier<AuthState> {
     await _clearUserLocally();
     await PushNotificationService.instance.unregisterToken();
     await _authService.signOut();
+
+    // Reset all user-specific feature providers
+    ref.invalidate(profileProvider);
+    ref.invalidate(contentProvider);
+    ref.invalidate(discoveryProvider);
+    ref.invalidate(messagingProvider);
+    ref.invalidate(notificationProvider);
+    ref.invalidate(opportunityProvider);
+    ref.invalidate(shortlistProvider);
+
     state = const AuthUnauthenticated();
   }
 

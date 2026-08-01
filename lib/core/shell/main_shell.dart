@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/notifications/providers/notification_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -68,9 +69,9 @@ class MainShell extends ConsumerWidget {
     // Middle tab adapts to user role
     final BottomNavigationBarItem middleTab = switch (role) {
       AccountRole.athlete => const BottomNavigationBarItem(
-          icon: Icon(Icons.cloud_upload_outlined),
-          activeIcon: Icon(Icons.cloud_upload),
-          label: 'Upload',
+          icon: Icon(Icons.add_box_outlined),
+          activeIcon: Icon(Icons.add_box),
+          label: 'Post',
         ),
       AccountRole.recruiter || AccountRole.club => const BottomNavigationBarItem(
           icon: Icon(Icons.event_outlined),
@@ -123,26 +124,7 @@ class MainShell extends ConsumerWidget {
     if (index == 1 || index == 2 || index == 3 || index == 4) {
       final authState = ref.read(authProvider);
       if (authState is! AuthAuthenticated) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Sign In Required'),
-            content: const Text('You need to sign in to access this section of the app.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  context.push('/signin');
-                },
-                child: const Text('Sign In'),
-              ),
-            ],
-          ),
-        );
+        context.push(AppRouter.auth);
         return;
       }
     }

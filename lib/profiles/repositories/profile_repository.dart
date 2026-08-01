@@ -31,9 +31,12 @@ class ProfileRepository {
   }
 
   Future<Athlete?> getAthleteByUserId(String userId) async {
-    return _athletes.values.firstWhere(
-      (a) => a.userId == userId,
-      orElse: () => Athlete(
+    try {
+      return _athletes.values.firstWhere(
+        (a) => a.userId == userId,
+      );
+    } catch (_) {
+      final defaultAthlete = Athlete(
         id: 'mock_athlete_$userId',
         userId: userId,
         displayName: 'Julius Mukubya',
@@ -42,8 +45,10 @@ class ProfileRepository {
         bio: 'Determined defender playing for local club.',
         profileBadgeLevel: TrustBadgeLevel.selfReported,
         availabilityStatus: AvailabilityStatus.openToTrials,
-      ),
-    );
+      );
+      _athletes[defaultAthlete.id] = defaultAthlete;
+      return defaultAthlete;
+    }
   }
 
   Future<Athlete> createProfile(Athlete profile) async {
@@ -61,11 +66,23 @@ class ProfileRepository {
   }
 
   Future<Athlete> addAchievement(String athleteId, Achievement achievement) async {
-    return _athletes[athleteId]!;
+    final athlete = _athletes[athleteId];
+    if (athlete == null) throw ProfileException('Athlete not found');
+    final updated = athlete.copyWith(
+      achievements: [...athlete.achievements, achievement],
+    );
+    _athletes[athleteId] = updated;
+    return updated;
   }
 
   Future<Athlete> removeAchievement(String athleteId, String achievementId) async {
-    return _athletes[athleteId]!;
+    final athlete = _athletes[athleteId];
+    if (athlete == null) throw ProfileException('Athlete not found');
+    final updated = athlete.copyWith(
+      achievements: athlete.achievements.where((a) => a.id != achievementId).toList(),
+    );
+    _athletes[athleteId] = updated;
+    return updated;
   }
 
   Future<List<Athlete>> searchAthletes({

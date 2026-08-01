@@ -133,7 +133,7 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
     Future<void> switchTo(BuildContext sheetContext, String? email) async {
       Navigator.pop(sheetContext);
       await ref.read(authProvider.notifier).signOut();
-      if (context.mounted) context.go(AppRouter.signIn, extra: email);
+      if (context.mounted) context.go(AppRouter.auth);
     }
 
     showModalBottomSheet(

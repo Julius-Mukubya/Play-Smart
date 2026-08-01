@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
-import 'package:play_smart/auth/screens/landing_screen.dart';
 import 'package:play_smart/auth/screens/sign_in_screen.dart';
 import 'package:play_smart/auth/screens/sign_up_screen.dart';
+import 'package:play_smart/auth/screens/landing_screen.dart';
 import 'package:play_smart/auth/screens/splash_screen.dart';
 import 'package:play_smart/profiles/screens/athlete_profile_screen.dart';
 import 'package:play_smart/admin/screens/verification_screen.dart';
@@ -45,6 +45,7 @@ class AppRouter {
   static const String landing = '/landing';
   static const String signUp = '/signup';
   static const String signIn = '/signin';
+  static const String auth = '/signin';
   static const String athleteSetup = '/onboarding/athlete';
   static const String verification = '/onboarding/verification';
   static const String discover = '/discover';
@@ -70,11 +71,8 @@ class AppRouter {
       // ── Auth routes (outside shell) ─────────────────────────────────────
       GoRoute(path: splash, builder: (_, __) => const SplashScreen()),
       GoRoute(path: landing, builder: (_, __) => const LandingScreen()),
+      GoRoute(path: signIn, builder: (_, __) => const SignInScreen()),
       GoRoute(path: signUp, builder: (_, __) => const SignUpScreen()),
-      GoRoute(
-        path: signIn,
-        builder: (_, state) => SignInScreen(prefillEmail: state.extra as String?),
-      ),
 
       // ── Onboarding (outside shell) ──────────────────────────────────────
       GoRoute(path: athleteSetup, builder: (_, __) => const AthleteSetupScreen()),

@@ -232,7 +232,9 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
     final id = widget.item.content!.id;
     final liked =
         ref.read(discoveryProvider).likedContentIds.contains(id);
-    if (!liked) ref.read(discoveryProvider.notifier).toggleLike(id);
+    final authState = ref.read(authProvider);
+    final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+    if (!liked) ref.read(discoveryProvider.notifier).toggleLike(id, userId);
     setState(() => _showHeart = true);
     _heartCtrl.forward(from: 0).then((_) {
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -465,6 +467,8 @@ class _MediaBackground extends StatelessWidget {
       return _VideoBackground(url: content.fileUrl!, isActive: isActive);
     }
 
+    // ── Photo / Image Content ──────────────────
+    if (content.fileUrl != null) {
       return Container(
         color: const Color(0xFF0D1117),
         child: Center(
@@ -476,6 +480,12 @@ class _MediaBackground extends StatelessWidget {
           ),
         ),
       );
+    }
+
+    // Photo without URL — show placeholder
+    if (content.type == ContentType.photo) {
+      return _placeholderGradient(Icons.image_outlined);
+    }
 
     // Text post
     return Container(
@@ -718,7 +728,9 @@ class _ActionRail extends ConsumerWidget {
           color: isLiked ? Colors.blueAccent : Colors.white,
           onTap: () {
             if (_ensureAuthenticated(context, ref)) {
-              ref.read(discoveryProvider.notifier).toggleLike(item.content!.id);
+              final authState = ref.read(authProvider);
+              final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+              ref.read(discoveryProvider.notifier).toggleLike(item.content!.id, userId);
             }
           },
         ),
@@ -729,7 +741,7 @@ class _ActionRail extends ConsumerWidget {
           color: Colors.white,
           onTap: () {
             if (_ensureAuthenticated(context, ref)) {
-              _showCommentsSheet(context, item);
+              _showCommentsSheet(context, ref, item);
             }
           },
         ),
@@ -739,6 +751,7 @@ class _ActionRail extends ConsumerWidget {
           label: 'Share',
           color: Colors.white,
           onTap: () {
+            Clipboard.setData(ClipboardData(text: item.content?.fileUrl ?? 'https://playsmart.app/content/${item.content?.id}'));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Link copied to clipboard! Ready to share.'),
@@ -756,7 +769,9 @@ class _ActionRail extends ConsumerWidget {
             color: isBookmarked ? Colors.amber : Colors.white,
             onTap: () {
               if (_ensureAuthenticated(context, ref)) {
-                ref.read(discoveryProvider.notifier).toggleBookmark(item.content!.id);
+                final authState = ref.read(authProvider);
+                final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+                ref.read(discoveryProvider.notifier).toggleBookmark(item.content!.id, userId);
               }
             },
           );
@@ -797,7 +812,11 @@ class _ActionRail extends ConsumerWidget {
       n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}k' : '$n';
 }
 
-void _showCommentsSheet(BuildContext context, FeedItem item) {
+void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
+  if (item.content == null) return;
+  final contentId = item.content!.id;
+  final commentController = TextEditingController();
+
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -806,20 +825,18 @@ void _showCommentsSheet(BuildContext context, FeedItem item) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (context) {
-      final commentController = TextEditingController();
-      final List<Map<String, String>> comments = [
-        {'user': 'Scout Allan', 'text': 'Incredible pace and spatial awareness!'},
-        {'user': 'Coach Patrick', 'text': 'We need this talent in our academy trials next week.'},
-      ];
       return StatefulBuilder(
         builder: (context, setSheetState) {
+          final discoveryRepo = ref.read(discoveryRepositoryProvider);
+          final authState = ref.read(authProvider);
+
           return Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
             child: Container(
               padding: const EdgeInsets.all(20),
-              height: 400,
+              height: 440,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -840,33 +857,53 @@ void _showCommentsSheet(BuildContext context, FeedItem item) {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: comments.length,
-                      itemBuilder: (ctx, idx) {
-                        final c = comments[idx];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 16,
-                                backgroundColor: const Color(0xFF4A90D9),
-                                child: Text(c['user']![0].toUpperCase(), style: const TextStyle(fontSize: 12, color: Colors.white)),
+                    child: FutureBuilder(
+                      future: discoveryRepo.getComments(contentId),
+                      builder: (ctx, snap) {
+                        final comments = snap.data ?? [];
+                        if (snap.connectionState == ConnectionState.waiting && comments.isEmpty) {
+                          return const Center(child: CircularProgressIndicator(color: Colors.white54));
+                        }
+                        if (comments.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No comments yet. Be the first to comment!',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: comments.length,
+                          itemBuilder: (ctx, idx) {
+                            final c = comments[idx];
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: const Color(0xFF4A90D9),
+                                    child: Text(
+                                      c.userName.isNotEmpty ? c.userName[0].toUpperCase() : '?',
+                                      style: const TextStyle(fontSize: 12, color: Colors.white),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(c.userName, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                        const SizedBox(height: 2),
+                                        Text(c.text, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(c['user']!, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 2),
-                                    Text(c['text']!, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -887,15 +924,19 @@ void _showCommentsSheet(BuildContext context, FeedItem item) {
                       ),
                       IconButton(
                         icon: const Icon(Icons.send, color: Color(0xFF4A90D9)),
-                        onPressed: () {
-                          if (commentController.text.trim().isNotEmpty) {
-                            setSheetState(() {
-                              comments.add({
-                                'user': 'You',
-                                'text': commentController.text.trim(),
-                              });
-                            });
+                        onPressed: () async {
+                          final text = commentController.text.trim();
+                          if (text.isNotEmpty) {
+                            final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+                            final userName = authState is AuthAuthenticated ? authState.user.name : 'Guest User';
+                            await ref.read(discoveryProvider.notifier).addComment(
+                              contentId: contentId,
+                              userId: userId,
+                              userName: userName,
+                              text: text,
+                            );
                             commentController.clear();
+                            setSheetState(() {});
                           }
                         },
                       ),
@@ -1557,26 +1598,7 @@ class _ErrorView extends StatelessWidget {
 bool _ensureAuthenticated(BuildContext context, WidgetRef ref) {
   final authState = ref.read(authProvider);
   if (authState is! AuthAuthenticated) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sign In Required'),
-        content: const Text('You need to sign in to perform this action.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.push('/signin');
-            },
-            child: const Text('Sign In'),
-          ),
-        ],
-      ),
-    );
+    context.push(AppRouter.auth);
     return false;
   }
   return true;

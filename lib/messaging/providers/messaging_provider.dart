@@ -15,6 +15,12 @@ final messagingServiceProvider = Provider<MessagingService>((ref) {
   return MessagingService();
 });
 
+/// Real-time chat messages stream provider.
+final conversationMessagesStreamProvider = StreamProvider.family<List<Message>, String>((ref, conversationId) {
+  final repo = ref.watch(messagingRepositoryProvider);
+  return repo.watchConversationMessages(conversationId);
+});
+
 /// Messaging state.
 class MessagingState {
   final List<MessageRequest> pendingRequests;

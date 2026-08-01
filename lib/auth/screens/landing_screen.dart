@@ -47,30 +47,28 @@ class LandingScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-              // Sign Up buttons
-              ElevatedButton(
+              // Get Started button
+              ElevatedButton.icon(
                 onPressed: () => context.push(AppRouter.signUp),
-                child: const Text('Sign Up as Athlete'),
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text('Get Started', style: TextStyle(fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => context.push(AppRouter.signUp),
-                child: const Text('Sign Up as Recruiter or Club'),
-              ),
-              const SizedBox(height: 24),
-              // Sign In prompt
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Already have an account?',
-                    style: theme.textTheme.bodyMedium,
+                onPressed: () => context.push(AppRouter.signIn),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  TextButton(
-                    onPressed: () => context.push(AppRouter.signIn),
-                    child: const Text('Sign In'),
-                  ),
-                ],
+                ),
+                child: const Text('I already have an account', style: TextStyle(fontSize: 16)),
               ),
               const SizedBox(height: 48),
               // Trust badge explanation section

@@ -180,10 +180,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       _uploadProgress = 0.0;
     });
 
-    // Storage paths are scoped by the auth user id (RLS bucket policy checks
-    // the first path segment against auth.uid()); the DB row's athlete_id
-    // must be the athlete profile's own id, not the user id — they're
-    // different rows (public.athletes.id vs public.users.id).
+    // Upload bucket path follows Firebase Storage convention:
+    // /athlete_content/{athleteId}/{filename}
+    // Access and uploads are secured by Firebase Storage Rules.
     final authState = ref.read(authProvider);
     var athlete = ref.read(profileProvider).value;
     if (athlete == null && authState is AuthAuthenticated) {

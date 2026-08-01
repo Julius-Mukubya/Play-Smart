@@ -145,28 +145,78 @@ class DiscoveryNotifier extends Notifier<DiscoveryState> {
   }
 
   /// Toggle like on a content item.
-  void toggleLike(String contentId) {
+  Future<void> toggleLike(String contentId, String userId) async {
     final liked = Set<String>.from(state.likedContentIds);
-    if (liked.contains(contentId)) {
+    final isLiked = liked.contains(contentId);
+    if (isLiked) {
       liked.remove(contentId);
     } else {
       liked.add(contentId);
     }
-    state = state.copyWith(likedContentIds: liked);
+
+    // Optimistically update state
+    final updatedFeed = state.feedItems.map((item) {
+      if (item.content?.id == contentId) {
+        return item.copyWith(
+          isLiked: !isLiked,
+          likeCount: isLiked ? (item.likeCount - 1).clamp(0, 99999) : item.likeCount + 1,
+        );
+      }
+      return item;
+    }).toList();
+
+    state = state.copyWith(likedContentIds: liked, feedItems: updatedFeed);
+    await _repository.toggleLike(contentId, userId);
   }
 
   /// Whether a content item is liked by the current user.
   bool isLiked(String contentId) => state.likedContentIds.contains(contentId);
 
-  /// Toggle bookmark on a content item.
-  void toggleBookmark(String contentId) {
+  /// Toggle bookmark/save on a content item.
+  Future<void> toggleBookmark(String contentId, String userId) async {
     final bookmarks = Set<String>.from(state.bookmarkedContentIds);
-    if (bookmarks.contains(contentId)) {
+    final isSaved = bookmarks.contains(contentId);
+    if (isSaved) {
       bookmarks.remove(contentId);
     } else {
       bookmarks.add(contentId);
     }
-    state = state.copyWith(bookmarkedContentIds: bookmarks);
+
+    final updatedFeed = state.feedItems.map((item) {
+      if (item.content?.id == contentId) {
+        return item.copyWith(isSaved: !isSaved);
+      }
+      return item;
+    }).toList();
+
+    state = state.copyWith(bookmarkedContentIds: bookmarks, feedItems: updatedFeed);
+    await _repository.toggleSave(contentId, userId);
+  }
+
+  /// Add a comment to a content item.
+  Future<void> addComment({
+    required String contentId,
+    required String userId,
+    required String userName,
+    String? userAvatar,
+    required String text,
+  }) async {
+    await _repository.addComment(
+      contentId: contentId,
+      userId: userId,
+      userName: userName,
+      userAvatar: userAvatar,
+      text: text,
+    );
+
+    final updatedFeed = state.feedItems.map((item) {
+      if (item.content?.id == contentId) {
+        return item.copyWith(commentCount: item.commentCount + 1);
+      }
+      return item;
+    }).toList();
+
+    state = state.copyWith(feedItems: updatedFeed);
   }
 
   /// Whether a content item is bookmarked by the current user.

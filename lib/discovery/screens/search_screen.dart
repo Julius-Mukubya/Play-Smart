@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/core/theme/app_theme.dart' as theme_colors;
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
+import 'package:play_smart/opportunities/providers/opportunity_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/athlete_grid_card.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
@@ -117,29 +118,86 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Expanded(
             child: state.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : state.athletes.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.search_off, size: 64, color: theme.colorScheme.outline),
-                              const SizedBox(height: 16),
-                              Text('No athletes found', style: theme.textTheme.titleLarge),
-                              const SizedBox(height: 8),
-                              Text(
-                                state.filters.activeFilterCount > 0
-                                    ? 'Try adjusting your filters.'
-                                    : 'Try searching by name, sport, or position.',
-                                style: theme.textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
+                : Builder(
+                    builder: (context) {
+                      final oppState = ref.watch(opportunityProvider);
+                      final searchLower = _searchController.text.toLowerCase().trim();
+                      final filteredOpps = oppState.opportunities.where((o) {
+                        if (searchLower.isEmpty) return true;
+                        return o.title.toLowerCase().contains(searchLower) ||
+                            o.description.toLowerCase().contains(searchLower) ||
+                            o.sport.toLowerCase().contains(searchLower) ||
+                            (o.location != null && o.location!.toLowerCase().contains(searchLower));
+                      }).toList();
+
+                      if (state.filters.sport == 'Opportunities') {
+                        if (filteredOpps.isEmpty) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.event_busy, size: 64, color: theme.colorScheme.outline),
+                                  const SizedBox(height: 16),
+                                  Text('No opportunities found', style: theme.textTheme.titleLarge),
+                                  const SizedBox(height: 8),
+                                  Text('Try searching for a different sport or location.', style: theme.textTheme.bodyMedium),
+                                ],
                               ),
-                            ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredOpps.length,
+                          itemBuilder: (ctx, i) {
+                            final opp = filteredOpps[i];
+                            final dateText = opp.date != null ? '${opp.date!.day}/${opp.date!.month}/${opp.date!.year}' : 'TBD';
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: theme.colorScheme.primaryContainer,
+                                  child: Icon(Icons.event, color: theme.colorScheme.primary),
+                                ),
+                                title: Text(opp.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text('${opp.sport} • ${opp.location ?? "Uganda"}\nEvent Date: $dateText'),
+                                isThreeLine: true,
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () => context.push('/opportunities'),
+                              ),
+                            );
+                          },
+                        );
+                      }
+
+                      if (state.athletes.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off, size: 64, color: theme.colorScheme.outline),
+                                const SizedBox(height: 16),
+                                Text('No athletes found', style: theme.textTheme.titleLarge),
+                                const SizedBox(height: 8),
+                                Text(
+                                  state.filters.activeFilterCount > 0
+                                      ? 'Try adjusting your filters.'
+                                      : 'Try searching by name, sport, or position.',
+                                  style: theme.textTheme.bodyMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      )
-                    : RefreshIndicator(
+                        );
+                      }
+
+                      return RefreshIndicator(
                         onRefresh: () async {
                           await ref.read(discoveryProvider.notifier).search();
                         },
@@ -157,7 +215,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             showShortlistAction: true,
                           ),
                         ),
-                      ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
