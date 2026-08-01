@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/repositories/profile_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -24,7 +25,11 @@ class ProfileNotifier extends Notifier<AsyncValue<Athlete?>> {
     try {
       final authState = ref.read(authProvider);
       if (authState is AuthAuthenticated) {
-        final profile = await _repository.getAthleteByUserId(authState.user.id);
+        var profile = await _repository.getAthleteByUserId(authState.user.id);
+        if (profile != null) {
+          final contentList = await ref.read(contentRepositoryProvider).getContentByAthleteId(profile.id);
+          profile = profile.copyWith(content: contentList);
+        }
         state = AsyncValue.data(profile);
       } else {
         state = const AsyncValue.data(null);
@@ -38,7 +43,11 @@ class ProfileNotifier extends Notifier<AsyncValue<Athlete?>> {
   Future<void> loadAthleteProfile(String athleteId) async {
     state = const AsyncValue.loading();
     try {
-      final profile = await _repository.getAthleteById(athleteId);
+      var profile = await _repository.getAthleteById(athleteId);
+      if (profile != null) {
+        final contentList = await ref.read(contentRepositoryProvider).getContentByAthleteId(profile.id);
+        profile = profile.copyWith(content: contentList);
+      }
       state = AsyncValue.data(profile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

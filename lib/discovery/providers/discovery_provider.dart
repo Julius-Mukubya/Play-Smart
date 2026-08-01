@@ -1,11 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/discovery/repositories/discovery_repository.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
+import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Discovery repository provider.
 final discoveryRepositoryProvider = Provider<DiscoveryRepository>((ref) {
-  return DiscoveryRepository();
+  final profileRepo = ref.watch(profileRepositoryOnlyProvider);
+  final contentRepo = ref.watch(contentRepositoryProvider);
+  return DiscoveryRepository(
+    profileRepository: profileRepo,
+    contentRepository: contentRepo,
+  );
 });
 
 /// Search filters state.

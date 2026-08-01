@@ -1,18 +1,31 @@
 import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/profiles/repositories/profile_repository.dart';
+import 'package:play_smart/profiles/repositories/content_repository.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
-/// Mock/In-memory Discovery repository — ready to be wired up with Firebase Firestore.
+/// Discovery repository — manages feeds by merging profiles and R2/Firebase Storage content.
 class DiscoveryRepository {
   final ProfileRepository _profileRepository;
+  final ContentRepository _contentRepository;
 
-  DiscoveryRepository({ProfileRepository? profileRepository})
-      : _profileRepository = profileRepository ?? ProfileRepository();
+  DiscoveryRepository({
+    ProfileRepository? profileRepository,
+    ContentRepository? contentRepository,
+  })  : _profileRepository = profileRepository ?? ProfileRepository(),
+        _contentRepository = contentRepository ?? ContentRepository();
 
-  Future<List<Athlete>> getDiscoverFeed() => _profileRepository.getAllAthletes();
+  Future<List<Athlete>> getDiscoverFeed() async {
+    final athletes = await _profileRepository.getAllAthletes();
+    final List<Athlete> enriched = [];
+    for (final athlete in athletes) {
+      final contentList = await _contentRepository.getContentByAthleteId(athlete.id);
+      enriched.add(athlete.copyWith(content: contentList));
+    }
+    return enriched;
+  }
 
   Future<List<FeedItem>> getContentFeed() async {
-    final athletes = await _profileRepository.getAllAthletes();
+    final athletes = await getDiscoverFeed();
 
     final List<List<FeedItem>> byAthlete = athletes
         .where((a) => a.content.isNotEmpty)
@@ -63,7 +76,7 @@ class DiscoveryRepository {
     AvailabilityStatus? availability,
     TrustBadgeLevel? minBadge,
   }) async {
-    return _profileRepository.searchAthletes(
+    final results = await _profileRepository.searchAthletes(
       sport: sport,
       position: position,
       minAge: minAge,
@@ -72,12 +85,19 @@ class DiscoveryRepository {
       availability: availability,
       minBadge: minBadge,
     );
+    
+    final List<Athlete> enriched = [];
+    for (final athlete in results) {
+      final contentList = await _contentRepository.getContentByAthleteId(athlete.id);
+      enriched.add(athlete.copyWith(content: contentList));
+    }
+    return enriched;
   }
 
   Future<List<Athlete>> getRecommendedFeed({
     List<String>? preferredSports,
     List<String>? preferredPositions,
   }) async {
-    return _profileRepository.getAllAthletes();
+    return getDiscoverFeed();
   }
 }
