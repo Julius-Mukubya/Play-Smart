@@ -286,6 +286,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.onSurface,
+                            backgroundColor: theme.colorScheme.surface,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
