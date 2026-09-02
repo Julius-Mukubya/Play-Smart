@@ -1,11 +1,13 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/messaging/repositories/connection_repository.dart';
 import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
@@ -85,6 +87,21 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
       appBar: AppBar(
         title: const Text('My Profile'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share_rounded),
+            tooltip: 'Share profile',
+            onPressed: () {
+              final athlete = profileAsync.value;
+              final targetId = athlete?.id ?? '';
+              Clipboard.setData(ClipboardData(text: 'https://playsmart.app/athlete/$targetId'));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile link copied to clipboard! Ready to share.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Edit profile',
@@ -564,17 +581,31 @@ class _MyProfileScreenState extends ConsumerState<MyProfileScreen> {
 
           const Divider(),
 
-          // Quick stats
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildQuickStat(theme, Icons.visibility_outlined, 'Profile Views', '0'),
-                _buildQuickStat(theme, Icons.bookmark_outlined, 'Shortlisted', '0'),
-                _buildQuickStat(theme, Icons.message_outlined, 'Messages', '0'),
-              ],
-            ),
+          // Content & Connection Stats
+          Builder(
+            builder: (context) {
+              final videoCount = athlete.content.where((c) => c.type == ContentType.video).length;
+              final postCount = athlete.content.where((c) => c.type != ContentType.video).length;
+              final totalLikes = athlete.content.fold<int>(0, (sum, c) => sum + c.likeCount);
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildQuickStat(theme, Icons.videocam_outlined, 'Videos', '$videoCount'),
+                    _buildQuickStat(theme, Icons.photo_library_outlined, 'Posts', '$postCount'),
+                    _buildQuickStat(theme, Icons.thumb_up_alt_outlined, 'Likes', '$totalLikes'),
+                    FutureBuilder<int>(
+                      future: ref.watch(connectionRepositoryProvider).getFriendsCount(athlete.userId),
+                      builder: (context, snap) {
+                        return _buildQuickStat(theme, Icons.people_outline, 'Friends', '${snap.data ?? 0}');
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
 
           const Divider(),

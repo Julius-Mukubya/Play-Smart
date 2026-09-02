@@ -17,6 +17,23 @@ import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 
 /// Discover screen — horizontal PageView, one full-screen card per swipe.
+/// Trigger provider to pause any currently playing video on discover feed when other buttons are clicked.
+class PauseVideoTriggerNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void trigger() => state++;
+}
+
+final pauseVideoTriggerProvider =
+    NotifierProvider<PauseVideoTriggerNotifier, int>(
+  PauseVideoTriggerNotifier.new,
+);
+
+void _pauseActiveVideo(WidgetRef ref) {
+  ref.read(pauseVideoTriggerProvider.notifier).trigger();
+}
+
 /// Swipe LEFT for next content, swipe RIGHT for previous.
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -99,15 +116,24 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: _TopBar(
             isSearching: _isSearching,
             searchController: _searchController,
-            onSearchChanged: (val) => setState(() => _searchQuery = val),
-            onToggleSearch: () => setState(() {
-              _isSearching = !_isSearching;
-              if (!_isSearching) {
-                _searchQuery = '';
-                _searchController.clear();
-              }
-            }),
-            onOpenSaved: () => _showSavedContentSheet(context, ref),
+            onSearchChanged: (val) {
+              _pauseActiveVideo(ref);
+              setState(() => _searchQuery = val);
+            },
+            onToggleSearch: () {
+              _pauseActiveVideo(ref);
+              setState(() {
+                _isSearching = !_isSearching;
+                if (!_isSearching) {
+                  _searchQuery = '';
+                  _searchController.clear();
+                }
+              });
+            },
+            onOpenSaved: () {
+              _pauseActiveVideo(ref);
+              _showSavedContentSheet(context, ref);
+            },
           ),
         ),
 
@@ -118,7 +144,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             left: 16,
             right: 16,
             child: Card(
-              color: const Color(0xFF1E293B),
+              color: Colors.white,
               elevation: 8,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Container(
@@ -138,7 +164,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                         padding: EdgeInsets.all(16),
                         child: Text(
                           'No matching videos found.',
-                          style: TextStyle(color: Colors.white70),
+                          style: TextStyle(color: Colors.black54),
                         ),
                       );
                     }
@@ -156,19 +182,20 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                                 : item.content?.type == ContentType.photo
                                     ? Icons.photo
                                     : Icons.article,
-                            color: Colors.blueAccent,
+                            color: AppColors.accentPrimary,
                           ),
                           title: Text(
                             item.content?.title ?? '',
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text(
                             item.athlete?.displayName ?? '',
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            style: const TextStyle(color: Colors.black54, fontSize: 12),
                           ),
                           onTap: () {
+                            _pauseActiveVideo(ref);
                             final feedIndex = state.feedItems.indexOf(item);
                             if (feedIndex != -1) {
                               _pageController.jumpToPage(feedIndex);
@@ -524,16 +551,16 @@ class _MediaBackground extends StatelessWidget {
 /// video plays, everything else stays paused. A small button lets the user
 /// override that and pause/resume manually; the override resets whenever
 /// the card becomes freshly visible again (a new "view" autoplays).
-class _VideoBackground extends StatefulWidget {
+class _VideoBackground extends ConsumerStatefulWidget {
   final String url;
   final bool isActive;
   const _VideoBackground({required this.url, required this.isActive});
 
   @override
-  State<_VideoBackground> createState() => _VideoBackgroundState();
+  ConsumerState<_VideoBackground> createState() => _VideoBackgroundState();
 }
 
-class _VideoBackgroundState extends State<_VideoBackground> {
+class _VideoBackgroundState extends ConsumerState<_VideoBackground> {
   late final VideoPlayerController _controller;
   bool _initialized = false;
   bool _failed = false;
@@ -586,6 +613,15 @@ class _VideoBackgroundState extends State<_VideoBackground> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(pauseVideoTriggerProvider, (prev, next) {
+      if (next != prev && _initialized && widget.isActive) {
+        if (!_userPaused) {
+          setState(() => _userPaused = true);
+          _controller.pause();
+        }
+      }
+    });
+
     if (_failed) {
       return const ColoredBox(
         color: Color(0xFF0D1117),
@@ -692,6 +728,7 @@ class _AthleteStrip extends ConsumerWidget {
           if (athlete != null) ...[
             GestureDetector(
               onTap: () {
+                _pauseActiveVideo(ref);
                 if (_ensureAuthenticated(context, ref)) {
                   context.push('/athlete/${athlete.id}');
                 }
@@ -769,6 +806,7 @@ class _ActionRail extends ConsumerWidget {
           label: _fmt(likeCount),
           color: isLiked ? Colors.blueAccent : Colors.white,
           onTap: () {
+            _pauseActiveVideo(ref);
             if (_ensureAuthenticated(context, ref)) {
               final authState = ref.read(authProvider);
               final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
@@ -782,6 +820,7 @@ class _ActionRail extends ConsumerWidget {
           label: _fmt(item.commentCount),
           color: Colors.white,
           onTap: () {
+            _pauseActiveVideo(ref);
             if (_ensureAuthenticated(context, ref)) {
               _showCommentsSheet(context, ref, item);
             }
@@ -793,6 +832,7 @@ class _ActionRail extends ConsumerWidget {
           label: 'Share',
           color: Colors.white,
           onTap: () {
+            _pauseActiveVideo(ref);
             Clipboard.setData(ClipboardData(text: item.content?.fileUrl ?? 'https://playsmart.app/content/${item.content?.id}'));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -810,6 +850,7 @@ class _ActionRail extends ConsumerWidget {
             label: 'Save',
             color: isBookmarked ? Colors.amber : Colors.white,
             onTap: () {
+              _pauseActiveVideo(ref);
               if (_ensureAuthenticated(context, ref)) {
                 final authState = ref.read(authProvider);
                 final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
@@ -828,13 +869,14 @@ class _ActionRail extends ConsumerWidget {
 
 void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
   if (item.content == null) return;
+  _pauseActiveVideo(ref);
   final contentId = item.content!.id;
   final commentController = TextEditingController();
 
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E293B),
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -851,6 +893,10 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
             child: Container(
               padding: const EdgeInsets.all(20),
               height: 440,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -859,7 +905,7 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -867,7 +913,7 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                   const SizedBox(height: 16),
                   const Text(
                     'Comments',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Expanded(
@@ -876,13 +922,13 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                       builder: (ctx, snap) {
                         final comments = snap.data ?? [];
                         if (snap.connectionState == ConnectionState.waiting && comments.isEmpty) {
-                          return const Center(child: CircularProgressIndicator(color: Colors.white54));
+                          return const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary));
                         }
                         if (comments.isEmpty) {
                           return const Center(
                             child: Text(
                               'No comments yet. Be the first to comment!',
-                              style: TextStyle(color: Colors.white54),
+                              style: TextStyle(color: Colors.black54),
                             ),
                           );
                         }
@@ -897,10 +943,10 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                                 children: [
                                   CircleAvatar(
                                     radius: 16,
-                                    backgroundColor: const Color(0xFF4A90D9),
+                                    backgroundColor: AppColors.accentPrimary.withValues(alpha: 0.15),
                                     child: Text(
                                       c.userName.isNotEmpty ? c.userName[0].toUpperCase() : '?',
-                                      style: const TextStyle(fontSize: 12, color: Colors.white),
+                                      style: const TextStyle(fontSize: 12, color: AppColors.accentPrimary, fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -908,9 +954,9 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(c.userName, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                        Text(c.userName, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.bold)),
                                         const SizedBox(height: 2),
-                                        Text(c.text, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                        Text(c.text, style: const TextStyle(color: Colors.black87, fontSize: 14)),
                                       ],
                                     ),
                                   ),
@@ -922,39 +968,47 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
                       },
                     ),
                   ),
-                  const Divider(color: Colors.white24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: commentController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: const InputDecoration(
-                            hintText: 'Add a comment...',
-                            hintStyle: TextStyle(color: Colors.white30),
-                            border: InputBorder.none,
+                  Divider(color: Colors.grey.shade200),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: commentController,
+                            style: const TextStyle(color: Colors.black87),
+                            decoration: const InputDecoration(
+                              hintText: 'Add a comment...',
+                              hintStyle: TextStyle(color: Colors.black45),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Color(0xFF4A90D9)),
-                        onPressed: () async {
-                          final text = commentController.text.trim();
-                          if (text.isNotEmpty) {
-                            final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
-                            final userName = authState is AuthAuthenticated ? authState.user.name : 'Guest User';
-                            await ref.read(discoveryProvider.notifier).addComment(
-                              contentId: contentId,
-                              userId: userId,
-                              userName: userName,
-                              text: text,
-                            );
-                            commentController.clear();
-                            setSheetState(() {});
-                          }
-                        },
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.send_rounded, color: AppColors.accentPrimary),
+                          onPressed: () async {
+                            final text = commentController.text.trim();
+                            if (text.isNotEmpty) {
+                              final userId = authState is AuthAuthenticated ? authState.user.id : 'guest';
+                              final userName = authState is AuthAuthenticated ? authState.user.name : 'Guest User';
+                              await ref.read(discoveryProvider.notifier).addComment(
+                                contentId: contentId,
+                                userId: userId,
+                                userName: userName,
+                                text: text,
+                              );
+                              commentController.clear();
+                              setSheetState(() {});
+                            }
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -967,6 +1021,7 @@ void _showCommentsSheet(BuildContext context, WidgetRef ref, FeedItem item) {
 }
 
 void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String athleteId, String athleteName) {
+  _pauseActiveVideo(ref);
   final authState = ref.read(authProvider);
   if (authState is! AuthAuthenticated) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -986,7 +1041,7 @@ void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String at
 
   showModalBottomSheet(
     context: context,
-    backgroundColor: const Color(0xFF1E293B),
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -998,19 +1053,23 @@ void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String at
           if (state.isLoading) {
             return const SizedBox(
               height: 250,
-              child: Center(child: CircularProgressIndicator(color: Colors.white)),
+              child: Center(child: CircularProgressIndicator(color: AppColors.accentPrimary)),
             );
           }
           
           return Container(
             padding: const EdgeInsets.all(20),
             height: 350,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Save to Shortlist',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -1018,7 +1077,7 @@ void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String at
                       ? const Center(
                           child: Text(
                             'No shortlists created yet.',
-                            style: TextStyle(color: Colors.white30),
+                            style: TextStyle(color: Colors.black54),
                           ),
                         )
                       : ListView.builder(
@@ -1027,10 +1086,10 @@ void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String at
                             final list = state.shortlists[idx];
                             final isAdded = list.athleteIds.contains(athleteId);
                             return ListTile(
-                              title: Text(list.name, style: const TextStyle(color: Colors.white)),
+                              title: Text(list.name, style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w600)),
                               trailing: Icon(
                                 isAdded ? Icons.bookmark_added : Icons.bookmark_add_outlined,
-                                color: isAdded ? const Color(0xFF4A90D9) : Colors.white54,
+                                color: isAdded ? AppColors.accentPrimary : Colors.black45,
                               ),
                               onTap: () {
                                 if (isAdded) {
@@ -1052,7 +1111,7 @@ void _showShortlistSelectionSheet(BuildContext context, WidgetRef ref, String at
                           },
                         ),
                 ),
-                const Divider(color: Colors.white24),
+                Divider(color: Colors.grey.shade200),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -1243,6 +1302,7 @@ class _TopBar extends ConsumerWidget {
                   icon: const Icon(Icons.bookmark_border_rounded,
                       color: Colors.white, size: 26),
                   onPressed: () {
+                    _pauseActiveVideo(ref);
                     if (_ensureAuthenticated(context, ref)) {
                       onOpenSaved();
                     }
@@ -1252,6 +1312,7 @@ class _TopBar extends ConsumerWidget {
                   icon: const Icon(Icons.notifications_none_rounded,
                       color: Colors.white, size: 26),
                   onPressed: () {
+                    _pauseActiveVideo(ref);
                     if (_ensureAuthenticated(context, ref)) {
                       context.push(AppRouter.notifications);
                     }
@@ -1260,12 +1321,16 @@ class _TopBar extends ConsumerWidget {
                 IconButton(
                   icon: const Icon(Icons.search_rounded,
                       color: Colors.white, size: 26),
-                  onPressed: onToggleSearch,
+                  onPressed: () {
+                    _pauseActiveVideo(ref);
+                    onToggleSearch();
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.person_outline_rounded,
                       color: Colors.white, size: 26),
                   onPressed: () {
+                    _pauseActiveVideo(ref);
                     if (_ensureAuthenticated(context, ref)) {
                       context.push(AppRouter.myProfile);
                     }
@@ -1278,10 +1343,11 @@ class _TopBar extends ConsumerWidget {
 }
 
 void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
+  _pauseActiveVideo(ref);
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1E293B),
+    backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -1296,8 +1362,12 @@ void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
 
           return Padding(
             padding: const EdgeInsets.all(20),
-            child: SizedBox(
+            child: Container(
               height: 400,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1306,7 +1376,7 @@ void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
+                        color: Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -1314,7 +1384,7 @@ void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
                   const SizedBox(height: 16),
                   const Text(
                     'Saved Videos & Content',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.black87, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Expanded(
@@ -1322,7 +1392,7 @@ void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
                         ? const Center(
                             child: Text(
                               'No saved items yet.',
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                              style: TextStyle(color: Colors.black54, fontSize: 14),
                             ),
                           )
                         : GridView.builder(

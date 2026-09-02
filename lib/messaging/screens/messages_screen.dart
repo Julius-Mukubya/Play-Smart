@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/messaging/providers/messaging_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
+import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
 /// Messages screen — shows message requests and active conversations.
@@ -40,6 +43,32 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Messages'),
+        actions: [
+          Consumer(
+            builder: (context, ref, _) {
+              final profileAsync = ref.watch(profileProvider);
+              final athlete = profileAsync.value;
+              final photoUrl = athlete?.photoUrl;
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () => context.push(AppRouter.myProfile),
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    backgroundImage: (photoUrl != null && photoUrl.isNotEmpty)
+                        ? CachedNetworkImageProvider(photoUrl)
+                        : null,
+                    child: (photoUrl == null || photoUrl.isEmpty)
+                        ? const Icon(Icons.person_outline_rounded, size: 20)
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -170,7 +199,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                   itemBuilder: (ctx, i) {
                     final request = filtered[i];
                     final isIncoming = request.toUserId == currentUserId;
-                    final otherName = isIncoming ? request.fromUserName : 'User (${request.toUserId})';
+                    final otherUserId = isIncoming ? request.fromUserId : request.toUserId;
+                    final otherName = isIncoming ? request.fromUserName : (request.toUserId);
                     final otherPhoto = isIncoming ? request.fromUserPhotoUrl : request.toUserPhotoUrl;
 
                     Color badgeColor;
@@ -196,30 +226,30 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
                           children: [
                             Row(
                               children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: theme.colorScheme.primaryContainer,
-                                  backgroundImage: (otherPhoto != null && otherPhoto.isNotEmpty)
-                                      ? CachedNetworkImageProvider(otherPhoto)
-                                      : null,
-                                  child: (otherPhoto == null || otherPhoto.isEmpty)
-                                      ? Text(
-                                          otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                                          style: TextStyle(
-                                            color: theme.colorScheme.primary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        )
-                                      : null,
+                                GestureDetector(
+                                  onTap: () {
+                                    if (otherUserId.isNotEmpty) context.push('/athlete/$otherUserId');
+                                  },
+                                  child: _ParticipantAvatar(
+                                    userId: otherUserId,
+                                    directPhotoUrl: otherPhoto,
+                                    fallbackName: otherName,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        otherName,
-                                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                      GestureDetector(
+                                        onTap: () {
+                                          if (otherUserId.isNotEmpty) context.push('/athlete/$otherUserId');
+                                        },
+                                        child: _ParticipantName(
+                                          userId: otherUserId,
+                                          fallbackName: otherName,
+                                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
                                       ),
                                       Text(
                                         isIncoming ? 'Sent you a connection request' : 'You sent a connection request',
@@ -336,36 +366,40 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
       itemCount: state.conversations.length,
       itemBuilder: (ctx, i) {
         final conv = state.conversations[i];
+        final otherUserId = conv.fromUserId == currentUserId ? conv.toUserId : conv.fromUserId;
         final otherName = _getOtherParticipantName(conv);
         final otherPhoto = conv.fromUserId == currentUserId ? conv.toUserPhotoUrl : conv.fromUserPhotoUrl;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: CircleAvatar(
-              radius: 22,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              backgroundImage: (otherPhoto != null && otherPhoto.isNotEmpty)
-                  ? CachedNetworkImageProvider(otherPhoto)
-                  : null,
-              child: (otherPhoto == null || otherPhoto.isEmpty)
-                  ? Text(
-                      otherName.isNotEmpty ? otherName[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
+            leading: GestureDetector(
+              onTap: () {
+                if (otherUserId.isNotEmpty) context.push('/athlete/$otherUserId');
+              },
+              child: _ParticipantAvatar(
+                userId: otherUserId,
+                directPhotoUrl: otherPhoto,
+                fallbackName: otherName,
+              ),
             ),
-            title: Text(otherName, style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: GestureDetector(
+              onTap: () {
+                if (otherUserId.isNotEmpty) context.push('/athlete/$otherUserId');
+              },
+              child: _ParticipantName(
+                userId: otherUserId,
+                fallbackName: otherName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
             subtitle: Text(
               conv.message.isNotEmpty ? conv.message : 'Open conversation',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openConversation(context, conv.id, otherName, otherPhotoUrl: otherPhoto),
+            onTap: () => _openConversation(context, conv.id, otherName, otherUserId: otherUserId, otherPhotoUrl: otherPhoto),
           ),
         );
       },
@@ -384,13 +418,14 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
     return null;
   }
 
-  void _openConversation(BuildContext context, String conversationId, String otherName, {String? otherPhotoUrl}) {
+  void _openConversation(BuildContext context, String conversationId, String otherName, {String? otherUserId, String? otherPhotoUrl}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => _ConversationScreen(
           conversationId: conversationId,
           otherName: otherName,
+          otherUserId: otherUserId,
           otherPhotoUrl: otherPhotoUrl,
         ),
       ),
@@ -402,11 +437,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen>
 class _ConversationScreen extends ConsumerStatefulWidget {
   final String conversationId;
   final String otherName;
+  final String? otherUserId;
   final String? otherPhotoUrl;
 
   const _ConversationScreen({
     required this.conversationId,
     required this.otherName,
+    this.otherUserId,
     this.otherPhotoUrl,
   });
 
@@ -439,34 +476,30 @@ class _ConversationScreenState extends ConsumerState<_ConversationScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              backgroundImage: (widget.otherPhotoUrl != null && widget.otherPhotoUrl!.isNotEmpty)
-                  ? CachedNetworkImageProvider(widget.otherPhotoUrl!)
-                  : null,
-              child: (widget.otherPhotoUrl == null || widget.otherPhotoUrl!.isEmpty)
-                  ? Text(
-                      widget.otherName.isNotEmpty ? widget.otherName[0].toUpperCase() : '?',
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    )
-                  : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                widget.otherName,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
+        title: GestureDetector(
+          onTap: () {
+            if (widget.otherUserId != null && widget.otherUserId!.isNotEmpty) {
+              context.push('/athlete/${widget.otherUserId}');
+            }
+          },
+          child: Row(
+            children: [
+              _ParticipantAvatar(
+                userId: widget.otherUserId ?? '',
+                directPhotoUrl: widget.otherPhotoUrl,
+                fallbackName: widget.otherName,
+                radius: 18,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ParticipantName(
+                  userId: widget.otherUserId ?? '',
+                  fallbackName: widget.otherName,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       body: Column(
@@ -584,5 +617,107 @@ class _ConversationScreenState extends ConsumerState<_ConversationScreen> {
     final auth = ref.read(authProvider);
     if (auth is AuthAuthenticated) return auth.user.id;
     return null;
+  }
+}
+
+class _ParticipantAvatar extends ConsumerWidget {
+  final String userId;
+  final String? directPhotoUrl;
+  final String fallbackName;
+  final double radius;
+
+  const _ParticipantAvatar({
+    required this.userId,
+    this.directPhotoUrl,
+    required this.fallbackName,
+    this.radius = 22,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (directPhotoUrl != null && directPhotoUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.accentPrimary.withValues(alpha: 0.15),
+        backgroundImage: CachedNetworkImageProvider(directPhotoUrl!),
+      );
+    }
+
+    if (userId.isEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        child: Text(
+          fallbackName.isNotEmpty ? fallbackName[0].toUpperCase() : '?',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+            fontSize: radius * 0.7,
+          ),
+        ),
+      );
+    }
+
+    return FutureBuilder<Athlete?>(
+      future: ref.read(profileRepositoryProvider).getAthleteByUserId(userId),
+      builder: (context, snap) {
+        final athlete = snap.data;
+        final photo = athlete?.photoUrl;
+        if (photo != null && photo.isNotEmpty) {
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: AppColors.accentPrimary.withValues(alpha: 0.15),
+            backgroundImage: CachedNetworkImageProvider(photo),
+          );
+        }
+
+        final initial = (athlete?.displayName.isNotEmpty == true)
+            ? athlete!.displayName[0].toUpperCase()
+            : (fallbackName.isNotEmpty ? fallbackName[0].toUpperCase() : '?');
+
+        return CircleAvatar(
+          radius: radius,
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Text(
+            initial,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: radius * 0.7,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ParticipantName extends ConsumerWidget {
+  final String userId;
+  final String fallbackName;
+  final TextStyle? style;
+
+  const _ParticipantName({
+    required this.userId,
+    required this.fallbackName,
+    this.style,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (fallbackName.isNotEmpty &&
+        !fallbackName.startsWith('user_') &&
+        !fallbackName.startsWith('mock_') &&
+        fallbackName.length < 30) {
+      return Text(fallbackName, style: style);
+    }
+
+    return FutureBuilder<Athlete?>(
+      future: ref.read(profileRepositoryProvider).getAthleteByUserId(userId),
+      builder: (context, snap) {
+        final name = snap.data?.displayName ?? fallbackName;
+        return Text(name.isNotEmpty ? name : 'Athlete', style: style);
+      },
+    );
   }
 }

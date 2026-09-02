@@ -165,6 +165,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _selectedDocumentType,
+                  dropdownColor: Colors.white,
                   decoration: const InputDecoration(
                     hintText: 'Select document type',
                     prefixIcon: Icon(Icons.description),

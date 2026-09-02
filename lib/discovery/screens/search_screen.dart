@@ -343,6 +343,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<AvailabilityStatus>(
                   initialValue: availability,
+                  dropdownColor: Colors.white,
                   decoration: const InputDecoration(prefixIcon: Icon(Icons.access_time)),
                   hint: const Text('Any'),
                   items: AvailabilityStatus.values.map((status) {
@@ -366,6 +367,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<TrustBadgeLevel>(
                   initialValue: minBadge,
+                  dropdownColor: Colors.white,
                   decoration: const InputDecoration(prefixIcon: Icon(Icons.verified)),
                   hint: const Text('Any'),
                   items: TrustBadgeLevel.values.map((level) {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
@@ -42,14 +44,29 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
         title: const Text('User Profile'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: () {},
+            icon: const Icon(Icons.share_rounded),
+            tooltip: 'Share profile',
+            onPressed: () {
+              final athlete = profileAsync.value;
+              final targetId = athlete?.id ?? widget.athleteId;
+              Clipboard.setData(ClipboardData(text: 'https://playsmart.app/athlete/$targetId'));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profile link copied to clipboard! Ready to share.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
           ),
           Consumer(
             builder: (context, ref, _) {
               final authState = ref.watch(authProvider);
               final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;
-              final isSelf = currentUserId != null && (currentUserId == widget.athleteId);
+              final profile = profileAsync.value;
+              final isSelf = currentUserId != null && (
+                currentUserId == widget.athleteId ||
+                (profile != null && (profile.userId == currentUserId || profile.id == currentUserId))
+              );
               if (isSelf) return const SizedBox.shrink();
 
               final isBlocked = ref.watch(privacyProvider).blockedUserIds.contains(widget.athleteId);
@@ -108,18 +125,17 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
     final privacy = ref.watch(privacyProvider);
     final authState = ref.watch(authProvider);
     final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;
-    final isSelf = currentUserId != null && (currentUserId == athlete.userId || currentUserId == athlete.id);
+    final isSelf = currentUserId != null && (
+      currentUserId == athlete.userId ||
+      currentUserId == athlete.id ||
+      currentUserId == widget.athleteId
+    );
 
     final sportsLabel = athlete.sports.isNotEmpty ? athlete.sports.join(', ') : 'User';
 
     // Calculate metrics
     final videoCount = athlete.content.where((c) => c.type == ContentType.video).length;
-    final postCount = athlete.content.where((c) => c.type == ContentType.post).length;
-    
-    // Calculate mock/active friends count
-    final activeFriends = ref.watch(messagingProvider).conversations.where((c) =>
-        c.fromUserId == athlete.userId || c.toUserId == athlete.userId).length;
-    final totalFriends = activeFriends + 4; // Mock standard baseline friends count
+    final postCount = athlete.content.where((c) => c.type != ContentType.video).length;
 
     return SingleChildScrollView(
       child: Column(
@@ -143,14 +159,19 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                 CircleAvatar(
                   radius: 48,
                   backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Text(
-                    athlete.displayName.isNotEmpty
-                        ? athlete.displayName[0].toUpperCase()
-                        : '?',
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
+                  backgroundImage: (athlete.photoUrl != null && athlete.photoUrl!.isNotEmpty)
+                      ? CachedNetworkImageProvider(athlete.photoUrl!)
+                      : null,
+                  child: (athlete.photoUrl == null || athlete.photoUrl!.isEmpty)
+                      ? Text(
+                          athlete.displayName.isNotEmpty
+                              ? athlete.displayName[0].toUpperCase()
+                              : '?',
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -214,17 +235,23 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                   Container(width: 1, height: 32, color: theme.colorScheme.outlineVariant),
                   _buildMetricItem(theme, 'Posts', '$postCount'),
                   Container(width: 1, height: 32, color: theme.colorScheme.outlineVariant),
-                  _buildMetricItem(theme, 'Friends', '$totalFriends'),
+                  FutureBuilder<int>(
+                    future: ref.watch(connectionRepositoryProvider).getFriendsCount(athlete.userId),
+                    builder: (context, snap) {
+                      return _buildMetricItem(theme, 'Friends', '${snap.data ?? 0}');
+                    },
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Primary Actions
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Consumer(
+          // Primary Actions (hidden on self profile)
+          if (!isSelf)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Consumer(
               builder: (context, ref, _) {
                 final authState = ref.watch(authProvider);
                 final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;

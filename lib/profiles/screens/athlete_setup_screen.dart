@@ -371,6 +371,7 @@ class _AthleteSetupScreenState extends ConsumerState<AthleteSetupScreen> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _country,
+                    dropdownColor: Colors.white,
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.public),
                     ),
