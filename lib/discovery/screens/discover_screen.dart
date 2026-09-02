@@ -130,10 +130,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 }
               });
             },
-            onOpenSaved: () {
-              _pauseActiveVideo(ref);
-              _showSavedContentSheet(context, ref);
-            },
           ),
         ),
 
@@ -1224,14 +1220,12 @@ class _TopBar extends ConsumerWidget {
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onToggleSearch;
-  final VoidCallback onOpenSaved;
 
   const _TopBar({
     required this.isSearching,
     required this.searchController,
     required this.onSearchChanged,
     required this.onToggleSearch,
-    required this.onOpenSaved,
   });
 
   @override
@@ -1298,16 +1292,6 @@ class _TopBar extends ConsumerWidget {
                         fontSize: 22,
                         fontWeight: FontWeight.w800)),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.bookmark_border_rounded,
-                      color: Colors.white, size: 26),
-                  onPressed: () {
-                    _pauseActiveVideo(ref);
-                    if (_ensureAuthenticated(context, ref)) {
-                      onOpenSaved();
-                    }
-                  },
-                ),
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded,
                       color: Colors.white, size: 26),
