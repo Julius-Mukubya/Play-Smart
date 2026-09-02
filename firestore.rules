@@ -5,11 +5,51 @@ service cloud.firestore {
     // ── Athletes ──────────────────────────────────────
     match /athletes/{athleteId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == athleteId;
+      allow write: if request.auth != null;
+    }
+    match /athletes/{athleteId}/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
 
-    // ── Athlete Content ───────────────────────────────
+    // ── Athlete Content & Subcollections (likes, comments) ──────────
     match /athlete_content/{contentId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /athlete_content/{contentId}/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Users & Saved Items ────────────────────────────
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Chat Threads & Messages ────────────────────────
+    match /chat_threads/{threadId} {
+      allow read, write: if request.auth != null;
+    }
+    match /chat_threads/{threadId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Friend / Connection Requests ───────────────────
+    match /friend_requests/{requestId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Opportunities & Applications ───────────────────
+    match /opportunities/{opportunityId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    match /opportunities/{opportunityId}/{document=**} {
       allow read: if true;
       allow write: if request.auth != null;
     }

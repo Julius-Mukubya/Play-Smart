@@ -1,24 +1,26 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
+import 'package:play_smart/settings/services/privacy_service.dart';
 
-/// Privacy & Safety screen.
-class PrivacySafetyScreen extends StatefulWidget {
+/// Privacy & Safety screen with functional settings.
+class PrivacySafetyScreen extends ConsumerStatefulWidget {
   const PrivacySafetyScreen({super.key});
 
   @override
-  State<PrivacySafetyScreen> createState() => _PrivacySafetyScreenState();
+  ConsumerState<PrivacySafetyScreen> createState() => _PrivacySafetyScreenState();
 }
 
-class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
-  bool _publicProfile = true;
-  bool _showLocation = true;
-  bool _allowMessageRequests = true;
-  bool _showInSearch = true;
-  bool _analyticsOptIn = true;
-
+class _PrivacySafetyScreenState extends ConsumerState<PrivacySafetyScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final privacy = ref.watch(privacyProvider);
+    final privacyNotifier = ref.read(privacyProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Privacy & Safety')),
@@ -29,24 +31,24 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
             icon: Icons.public_outlined,
             title: 'Public Profile',
             subtitle: 'Anyone can view your profile and content',
-            value: _publicProfile,
-            onChanged: (v) => setState(() => _publicProfile = v),
+            value: privacy.publicProfile,
+            onChanged: (v) => privacyNotifier.setPublicProfile(v),
             theme: theme,
           ),
           _ToggleTile(
             icon: Icons.location_on_outlined,
             title: 'Show Location',
             subtitle: 'Display your city on your public profile',
-            value: _showLocation,
-            onChanged: (v) => setState(() => _showLocation = v),
+            value: privacy.showLocation,
+            onChanged: (v) => privacyNotifier.setShowLocation(v),
             theme: theme,
           ),
           _ToggleTile(
             icon: Icons.search_outlined,
             title: 'Appear in Search',
             subtitle: 'Allow recruiters to find you via search',
-            value: _showInSearch,
-            onChanged: (v) => setState(() => _showInSearch = v),
+            value: privacy.showInSearch,
+            onChanged: (v) => privacyNotifier.setShowInSearch(v),
             theme: theme,
           ),
 
@@ -56,8 +58,8 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
             title: 'Allow Message Requests',
             subtitle:
                 'Recruiters and clubs can send you connection requests',
-            value: _allowMessageRequests,
-            onChanged: (v) => setState(() => _allowMessageRequests = v),
+            value: privacy.allowMessageRequests,
+            onChanged: (v) => privacyNotifier.setAllowMessageRequests(v),
             theme: theme,
           ),
 
@@ -67,8 +69,8 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
             title: 'Analytics & Insights',
             subtitle:
                 'Allow Play Smart to collect usage data to improve your experience',
-            value: _analyticsOptIn,
-            onChanged: (v) => setState(() => _analyticsOptIn = v),
+            value: privacy.analyticsOptIn,
+            onChanged: (v) => privacyNotifier.setAnalyticsOptIn(v),
             theme: theme,
           ),
 
@@ -76,25 +78,25 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
           _ActionTile(
             icon: Icons.lock_outline,
             title: 'Change Password',
-            subtitle: 'Update your account password',
+            subtitle: 'Send a password reset link to your email',
             iconColor: AppColors.accentPrimary,
-            onTap: () => _showComingSoon(context),
+            onTap: () => _sendPasswordResetEmail(context),
             theme: theme,
           ),
           _ActionTile(
             icon: Icons.devices_outlined,
             title: 'Active Sessions',
-            subtitle: 'View and manage devices signed into your account',
+            subtitle: 'View active sign-in information for this device',
             iconColor: AppColors.accentPrimary,
-            onTap: () => _showComingSoon(context),
+            onTap: () => _showActiveSessions(context),
             theme: theme,
           ),
           _ActionTile(
             icon: Icons.block_outlined,
             title: 'Blocked Accounts',
-            subtitle: 'Manage accounts you have blocked',
+            subtitle: 'Manage accounts you have blocked (${privacy.blockedUserIds.length})',
             iconColor: AppColors.stateWarning,
-            onTap: () => _showComingSoon(context),
+            onTap: () => _showBlockedAccounts(context),
             theme: theme,
           ),
 
@@ -139,12 +141,157 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
     );
   }
 
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Coming soon'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 2),
+  void _sendPasswordResetEmail(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email;
+    if (email == null || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No email address associated with your current session.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Text('Send a password reset link to $email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Password reset link sent to $email'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to send reset link: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Send Email'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showActiveSessions(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final lastSignIn = user?.metadata.lastSignInTime;
+    final creationTime = user?.metadata.creationTime;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Active Sessions',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accentPrimary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.smartphone_rounded, color: AppColors.accentPrimary),
+              ),
+              title: const Text('This Device (Current Session)', style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(
+                'Signed in since ${lastSignIn != null ? "${lastSignIn.day}/${lastSignIn.month}/${lastSignIn.year}" : "recent"}',
+              ),
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.stateSuccess.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Active',
+                  style: TextStyle(color: AppColors.stateSuccess, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            if (creationTime != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Account created on ${creationTime.day}/${creationTime.month}/${creationTime.year}',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showBlockedAccounts(BuildContext context) {
+    final privacy = ref.read(privacyProvider);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Blocked Accounts',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (privacy.blockedUserIds.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text('No accounts currently blocked.', style: TextStyle(color: AppColors.textMuted)),
+                ),
+              )
+            else
+              ...privacy.blockedUserIds.map((userId) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const CircleAvatar(child: Icon(Icons.person_off_rounded)),
+                    title: Text('Account ID: $userId'),
+                    trailing: TextButton(
+                      onPressed: () {
+                        ref.read(privacyProvider.notifier).unblockUser(userId);
+                        Navigator.pop(ctx);
+                        _showBlockedAccounts(context);
+                      },
+                      child: const Text('Unblock'),
+                    ),
+                  )),
+          ],
+        ),
       ),
     );
   }
@@ -202,7 +349,7 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (_) => Dialog(
+      builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
         insetPadding:
@@ -253,7 +400,26 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
               const SizedBox(height: 28),
               const Divider(height: 1, color: AppColors.borderDefault),
               InkWell(
-                onTap: () => Navigator.pop(context),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final user = FirebaseAuth.instance.currentUser;
+                    await user?.delete();
+                    await ref.read(authProvider.notifier).signOut();
+                    if (context.mounted) {
+                      context.go(AppRouter.landing);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Your account has been deleted.')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not delete account: $e. You may need to sign in again first.')),
+                      );
+                    }
+                  }
+                },
                 child: const SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -268,7 +434,7 @@ class _PrivacySafetyScreenState extends State<PrivacySafetyScreen> {
               ),
               const Divider(height: 1, color: AppColors.borderDefault),
               InkWell(
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pop(ctx),
                 child: const SizedBox(
                   width: double.infinity,
                   height: 52,

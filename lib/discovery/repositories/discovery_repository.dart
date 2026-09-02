@@ -35,43 +35,77 @@ class DiscoveryRepository {
   }
 
   Future<List<FeedItem>> getContentFeed({String? currentUserId}) async {
-    final athletes = await getDiscoverFeed();
-
-    final List<List<FeedItem>> byAthlete = athletes
-        .where((a) => a.content.isNotEmpty)
-        .map((a) => a.content
-            .map((c) => FeedItem(
-                  content: c,
-                  athlete: a,
-                  likeCount: c.likeCount,
-                  commentCount: c.commentCount,
-                  isLiked: _likedContentIds.contains(c.id),
-                  isSaved: _savedContentIds.contains(c.id),
-                ))
-            .toList())
-        .toList();
+    final allContent = await _contentRepository.getAllContent();
+    final athletes = await _profileRepository.getAllAthletes();
+    final Map<String, Athlete> athleteMap = {for (final a in athletes) a.id: a};
+    for (final a in athletes) {
+      athleteMap[a.userId] = a;
+    }
 
     final List<FeedItem> feed = [];
-    int maxLen = byAthlete.fold(0, (m, l) => l.length > m ? l.length : m);
     int adCount = 1;
-    for (int i = 0; i < maxLen; i++) {
-      for (final list in byAthlete) {
-        if (i < list.length) {
-          feed.add(list[i]);
-          if (feed.length % 3 == 2) {
-            feed.add(FeedItem(
-              isAd: true,
-              adTitle: adCount == 1 ? 'MTN Sports Uganda' : 'Nike Football Academy',
-              adDescription: adCount == 1
-                  ? 'Connect with MTN Sports for exclusive grassroots tournaments, kits, and training camps!'
-                  : 'Enroll in the Nike Elite Academy trials. Register now to showcase your skills to international scouts.',
-              adImageUrl: adCount == 1
-                  ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800'
-                  : 'https://images.unsplash.com/photo-1541252260730-0412e8e2108e?w=800',
-            ));
-            adCount = adCount == 1 ? 2 : 1;
-          }
+
+    for (final c in allContent) {
+      Athlete? athlete = athleteMap[c.athleteId];
+      if (athlete == null) {
+        athlete = await _profileRepository.getAthleteById(c.athleteId) ??
+                  await _profileRepository.getAthleteByUserId(c.athleteId);
+        if (athlete != null) {
+          athleteMap[c.athleteId] = athlete;
         }
+      }
+
+      if (athlete == null) {
+        try {
+          final userDoc = await _firestore.collection('users').doc(c.athleteId).get();
+          if (userDoc.exists && userDoc.data() != null) {
+            final data = userDoc.data()!;
+            athlete = Athlete(
+              id: c.athleteId,
+              userId: c.athleteId,
+              displayName: (data['displayName'] ?? data['name'] ?? 'Athlete') as String,
+              photoUrl: (data['photoUrl'] ?? data['avatarUrl'] ?? data['photo_url']) as String?,
+              sports: List<String>.from(data['sports'] ?? ['Football']),
+              positions: List<String>.from(data['positions'] ?? ['Player']),
+              bio: (data['bio'] ?? '') as String,
+            );
+            athleteMap[c.athleteId] = athlete;
+          }
+        } catch (_) {}
+      }
+
+      athlete ??= Athlete(
+        id: c.athleteId,
+        userId: c.athleteId,
+        displayName: 'Athlete',
+        sports: ['Football'],
+        positions: ['Player'],
+        bio: 'Athlete profile on Play Smart.',
+        profileBadgeLevel: TrustBadgeLevel.selfReported,
+        availabilityStatus: AvailabilityStatus.openToTrials,
+      );
+
+      feed.add(FeedItem(
+        content: c,
+        athlete: athlete,
+        likeCount: c.likeCount,
+        commentCount: c.commentCount,
+        isLiked: _likedContentIds.contains(c.id),
+        isSaved: _savedContentIds.contains(c.id),
+      ));
+
+      if (feed.length % 4 == 3) {
+        feed.add(FeedItem(
+          isAd: true,
+          adTitle: adCount == 1 ? 'MTN Sports Uganda' : 'Nike Football Academy',
+          adDescription: adCount == 1
+              ? 'Connect with MTN Sports for exclusive grassroots tournaments, kits, and training camps!'
+              : 'Enroll in the Nike Elite Academy trials. Register now to showcase your skills to international scouts.',
+          adImageUrl: adCount == 1
+              ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800'
+              : 'https://images.unsplash.com/photo-1541252260730-0412e8e2108e?w=800',
+        ));
+        adCount = adCount == 1 ? 2 : 1;
       }
     }
 

@@ -23,6 +23,7 @@ final conversationMessagesStreamProvider = StreamProvider.family<List<Message>, 
 
 /// Messaging state.
 class MessagingState {
+  final List<MessageRequest> allRequests;
   final List<MessageRequest> pendingRequests;
   final List<MessageRequest> conversations;
   final List<Message> currentMessages;
@@ -30,6 +31,7 @@ class MessagingState {
   final String? error;
 
   const MessagingState({
+    this.allRequests = const [],
     this.pendingRequests = const [],
     this.conversations = const [],
     this.currentMessages = const [],
@@ -38,6 +40,7 @@ class MessagingState {
   });
 
   MessagingState copyWith({
+    List<MessageRequest>? allRequests,
     List<MessageRequest>? pendingRequests,
     List<MessageRequest>? conversations,
     List<Message>? currentMessages,
@@ -46,6 +49,7 @@ class MessagingState {
     bool clearError = false,
   }) {
     return MessagingState(
+      allRequests: allRequests ?? this.allRequests,
       pendingRequests: pendingRequests ?? this.pendingRequests,
       conversations: conversations ?? this.conversations,
       currentMessages: currentMessages ?? this.currentMessages,
@@ -59,7 +63,7 @@ class MessagingState {
 class MessagingNotifier extends Notifier<MessagingState> {
   @override
   MessagingState build() {
-    return MessagingState();
+    return const MessagingState();
   }
 
   MessagingRepository get _repository => ref.read(messagingRepositoryProvider);
@@ -83,9 +87,11 @@ class MessagingNotifier extends Notifier<MessagingState> {
     if (userId == null) return;
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final pending = await _repository.getPendingRequests(userId);
+      final allRequests = await _repository.getAllRequests(userId);
+      final pending = allRequests.where((r) => r.isPending && r.toUserId == userId).toList();
       final conversations = await _repository.getConversations(userId);
       state = state.copyWith(
+        allRequests: allRequests,
         pendingRequests: pending,
         conversations: conversations,
         isLoading: false,

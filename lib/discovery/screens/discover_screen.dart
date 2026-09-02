@@ -644,13 +644,13 @@ class _VideoBackgroundState extends State<_VideoBackground> {
 // Athlete strip
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _AthleteStrip extends StatelessWidget {
+class _AthleteStrip extends ConsumerWidget {
   final FeedItem item;
   final bool isLiked;
   const _AthleteStrip({required this.item, required this.isLiked});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (item.isAd) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -681,6 +681,7 @@ class _AthleteStrip extends StatelessWidget {
       );
     }
     final content = item.content!;
+    final athlete = item.athlete;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -688,12 +689,53 @@ class _AthleteStrip extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (athlete != null) ...[
+            GestureDetector(
+              onTap: () {
+                if (_ensureAuthenticated(context, ref)) {
+                  context.push('/athlete/${athlete.id}');
+                }
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: CircleAvatar(
+                      radius: 15,
+                      backgroundColor: AppColors.accentPrimary,
+                      backgroundImage: (athlete.photoUrl != null && athlete.photoUrl!.isNotEmpty)
+                          ? CachedNetworkImageProvider(athlete.photoUrl!)
+                          : null,
+                      child: (athlete.photoUrl == null || athlete.photoUrl!.isEmpty)
+                          ? const Icon(Icons.person, color: Colors.white, size: 16)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    athlete.displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      shadows: [Shadow(color: Colors.black54, blurRadius: 4)],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           if (content.type != ContentType.post)
             Text(
               content.title,
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                   shadows: [Shadow(color: Colors.black54, blurRadius: 4)]),
               maxLines: 2,
@@ -776,34 +818,6 @@ class _ActionRail extends ConsumerWidget {
             },
           );
         }()),
-        const SizedBox(height: 14),
-        GestureDetector(
-          onTap: () {
-            if (_ensureAuthenticated(context, ref)) {
-              context.push('/athlete/${item.athlete!.id}');
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: AppColors.accentPrimary,
-              child: Text(
-                item.athlete!.displayName.isNotEmpty
-                    ? item.athlete!.displayName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -1247,6 +1261,15 @@ class _TopBar extends ConsumerWidget {
                   icon: const Icon(Icons.search_rounded,
                       color: Colors.white, size: 26),
                   onPressed: onToggleSearch,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_outline_rounded,
+                      color: Colors.white, size: 26),
+                  onPressed: () {
+                    if (_ensureAuthenticated(context, ref)) {
+                      context.push(AppRouter.myProfile);
+                    }
+                  },
                 ),
               ],
             ),

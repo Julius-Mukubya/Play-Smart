@@ -6,8 +6,13 @@ import 'package:play_smart/shared/types/domain_types.dart' as domain;
 
 /// Auth repository integrated with Firebase Auth and Google Sign-In.
 class AuthRepository {
-  final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final fb.FirebaseAuth? _authInstance;
+  fb.FirebaseAuth get _auth => _authInstance ?? fb.FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn;
+
+  AuthRepository({fb.FirebaseAuth? auth, GoogleSignIn? googleSignIn})
+      : _authInstance = auth,
+        _googleSignIn = googleSignIn ?? GoogleSignIn();
 
   domain.User? get currentUser {
     final fbUser = _auth.currentUser;

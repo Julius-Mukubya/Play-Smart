@@ -287,20 +287,50 @@ class AthleteContent {
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory AthleteContent.fromJson(Map<String, dynamic> json) => AthleteContent(
-        id: json['id'] as String,
-        athleteId: json['athlete_id'] as String,
-        type: ContentType.values.byName(json['type'] as String),
-        title: json['title'] as String,
+        id: json['id'] as String? ?? '',
+        athleteId: (json['athlete_id'] ?? json['athleteId']) as String? ?? '',
+        type: ContentType.values.firstWhere(
+          (e) => e.name == json['type'],
+          orElse: () => ContentType.video,
+        ),
+        title: json['title'] as String? ?? '',
         description: json['description'] as String? ?? '',
-        fileUrl: json['file_url'] as String?,
-        thumbnailUrl: json['thumbnail_url'] as String?,
-        momentTag: json['moment_tag'] != null
-            ? MomentType.values.byName(json['moment_tag'] as String)
+        fileUrl: (json['file_url'] ?? json['fileUrl']) as String?,
+        thumbnailUrl: (json['thumbnail_url'] ?? json['thumbnailUrl']) as String?,
+        momentTag: (json['moment_tag'] ?? json['momentTag']) != null
+            ? MomentType.values.firstWhere(
+                (e) => e.name == (json['moment_tag'] ?? json['momentTag']),
+                orElse: () => MomentType.goal,
+              )
             : null,
-        likeCount: json['like_count'] as int? ?? 0,
-        commentCount: json['comment_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
+        likeCount: (json['like_count'] ?? json['likeCount']) as int? ?? 0,
+        commentCount: (json['comment_count'] ?? json['commentCount']) as int? ?? 0,
+        createdAt: json['created_at'] != null
+            ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+            : (json['createdAt'] != null
+                ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+                : DateTime.now()),
       );
+
+  factory AthleteContent.fromMap(Map<String, dynamic> data, String id) {
+    return AthleteContent.fromJson({...data, 'id': id});
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'athleteId': athleteId,
+      'type': type.name,
+      'title': title,
+      'description': description,
+      'fileUrl': fileUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'momentTag': momentTag?.name,
+      'likeCount': likeCount,
+      'commentCount': commentCount,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
 }
 
 /// Athlete profile — single source of truth.
@@ -392,6 +422,80 @@ class Athlete {
         createdAt: DateTime.parse(json['created_at'] as String),
         updatedAt: DateTime.parse(json['updated_at'] as String),
       );
+
+  factory Athlete.fromMap(Map<String, dynamic> json, String id) {
+    return Athlete(
+      id: id,
+      userId: (json['userId'] ?? json['user_id']) as String? ?? id,
+      displayName: (json['displayName'] ?? json['display_name'] ?? json['name']) as String? ?? 'Athlete',
+      photoUrl: (json['photoUrl'] ?? json['photo_url'] ?? json['avatarUrl']) as String?,
+      sports: List<String>.from(json['sports'] as List? ?? const []),
+      positions: List<String>.from(json['positions'] as List? ?? const []),
+      age: json['age'] as int?,
+      height: (json['height'] as num?)?.toDouble(),
+      weight: (json['weight'] as num?)?.toDouble(),
+      dominantFootHand: (json['dominantFootHand'] ?? json['dominant_foot_hand']) as String?,
+      currentTeam: (json['currentTeam'] ?? json['current_team']) as String?,
+      country: json['country'] as String?,
+      city: json['city'] as String?,
+      bio: json['bio'] as String?,
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
+      availabilityStatus: json['availabilityStatus'] != null
+          ? AvailabilityStatus.values.firstWhere(
+              (e) => e.name == json['availabilityStatus'],
+              orElse: () => AvailabilityStatus.openToTrials,
+            )
+          : (json['availability_status'] != null
+              ? AvailabilityStatusDb.fromDb(json['availability_status'] as String)
+              : AvailabilityStatus.openToTrials),
+      profileBadgeLevel: json['profileBadgeLevel'] != null
+          ? TrustBadgeLevel.values.firstWhere(
+              (e) => e.name == json['profileBadgeLevel'],
+              orElse: () => TrustBadgeLevel.selfReported,
+            )
+          : (json['profile_badge_level'] != null
+              ? TrustBadgeLevelDb.fromDb(json['profile_badge_level'] as String)
+              : TrustBadgeLevel.selfReported),
+      profileCompleteness: (json['profileCompleteness'] ?? json['profile_completeness'] as num?)?.toDouble() ?? 0.0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+          : (json['created_at'] != null
+              ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+              : DateTime.now()),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString()) ?? DateTime.now()
+          : (json['updated_at'] != null
+              ? DateTime.tryParse(json['updated_at'].toString()) ?? DateTime.now()
+              : DateTime.now()),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'userId': userId,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'sports': sports,
+      'positions': positions,
+      'age': age,
+      'height': height,
+      'weight': weight,
+      'dominantFootHand': dominantFootHand,
+      'currentTeam': currentTeam,
+      'country': country,
+      'city': city,
+      'bio': bio,
+      'lat': lat,
+      'lng': lng,
+      'availabilityStatus': availabilityStatus.name,
+      'profileBadgeLevel': profileBadgeLevel.name,
+      'profileCompleteness': profileCompleteness,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
 
   Athlete copyWith({
     String? displayName,
@@ -631,9 +735,12 @@ class MessageRequest {
   final String id;
   final String fromUserId;
   final String fromUserName;
+  final String? fromUserPhotoUrl;
   final String toUserId;
+  final String? toUserPhotoUrl;
   final String message;
   final bool accepted;
+  final String status; // 'pending', 'accepted', 'rejected'
   final bool requiresMonitoring;
   final DateTime createdAt;
 
@@ -641,40 +748,83 @@ class MessageRequest {
     required this.id,
     required this.fromUserId,
     required this.fromUserName,
+    this.fromUserPhotoUrl,
     required this.toUserId,
+    this.toUserPhotoUrl,
     this.message = '',
     this.accepted = false,
+    String? status,
     this.requiresMonitoring = false,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  })  : status = status ?? (accepted ? 'accepted' : 'pending'),
+        createdAt = createdAt ?? DateTime.now();
 
-  factory MessageRequest.fromJson(Map<String, dynamic> json) => MessageRequest(
-        id: json['id'] as String,
-        fromUserId: json['from_user_id'] as String,
-        fromUserName: json['from_user_name'] as String,
-        toUserId: json['to_user_id'] as String,
-        message: json['message'] as String? ?? '',
-        accepted: json['accepted'] as bool? ?? false,
-        requiresMonitoring: json['requires_monitoring'] as bool? ?? false,
-        createdAt: DateTime.parse(json['created_at'] as String),
-      );
+  bool get isPending => status == 'pending';
+  bool get isAccepted => status == 'accepted' || accepted;
+  bool get isRejected => status == 'rejected' || status == 'declined';
+
+  factory MessageRequest.fromJson(Map<String, dynamic> json) {
+    final accepted = json['accepted'] as bool? ?? false;
+    final rawStatus = json['status'] as String?;
+    final resolvedStatus = rawStatus ?? (accepted ? 'accepted' : 'pending');
+    return MessageRequest(
+      id: json['id'] as String? ?? '',
+      fromUserId: (json['from_user_id'] ?? json['fromUserId']) as String? ?? '',
+      fromUserName: (json['from_user_name'] ?? json['fromUserName']) as String? ?? '',
+      fromUserPhotoUrl: (json['from_user_photo_url'] ?? json['fromUserPhotoUrl']) as String?,
+      toUserId: (json['to_user_id'] ?? json['toUserId']) as String? ?? '',
+      toUserPhotoUrl: (json['to_user_photo_url'] ?? json['toUserPhotoUrl']) as String?,
+      message: (json['message'] ?? json['initialMessage']) as String? ?? '',
+      accepted: resolvedStatus == 'accepted',
+      status: resolvedStatus,
+      requiresMonitoring: (json['requires_monitoring'] ?? json['requiresMonitoring']) as bool? ?? false,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+          : (json['timestamp'] != null
+              ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
+              : DateTime.now()),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'fromUserId': fromUserId,
+      'fromUserName': fromUserName,
+      'fromUserPhotoUrl': fromUserPhotoUrl,
+      'toUserId': toUserId,
+      'toUserPhotoUrl': toUserPhotoUrl,
+      'initialMessage': message,
+      'accepted': isAccepted,
+      'status': status,
+      'requiresMonitoring': requiresMonitoring,
+      'timestamp': createdAt.toIso8601String(),
+    };
+  }
 
   MessageRequest copyWith({
     String? id,
     String? fromUserId,
     String? fromUserName,
+    String? fromUserPhotoUrl,
     String? toUserId,
+    String? toUserPhotoUrl,
     String? message,
     bool? accepted,
+    String? status,
     bool? requiresMonitoring,
     DateTime? createdAt,
-  }) => MessageRequest(
+  }) =>
+      MessageRequest(
         id: id ?? this.id,
         fromUserId: fromUserId ?? this.fromUserId,
         fromUserName: fromUserName ?? this.fromUserName,
+        fromUserPhotoUrl: fromUserPhotoUrl ?? this.fromUserPhotoUrl,
         toUserId: toUserId ?? this.toUserId,
+        toUserPhotoUrl: toUserPhotoUrl ?? this.toUserPhotoUrl,
         message: message ?? this.message,
         accepted: accepted ?? this.accepted,
+        status: status ?? this.status,
         requiresMonitoring: requiresMonitoring ?? this.requiresMonitoring,
         createdAt: createdAt ?? this.createdAt,
       );

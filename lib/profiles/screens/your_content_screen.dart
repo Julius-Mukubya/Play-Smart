@@ -5,6 +5,7 @@ import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/app_dialog.dart';
+import 'package:play_smart/shared/widgets/content_category_bar.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 
 class YourContentScreen extends ConsumerStatefulWidget {
@@ -15,7 +16,8 @@ class YourContentScreen extends ConsumerStatefulWidget {
 }
 
 class _YourContentScreenState extends ConsumerState<YourContentScreen> {
-  ContentType? _contentFilter;
+  ContentType? _selectedType;
+  MomentType? _selectedMoment;
 
   @override
   Widget build(BuildContext context) {
@@ -35,30 +37,26 @@ class _YourContentScreenState extends ConsumerState<YourContentScreen> {
           }
 
           final filtered = profile.content.where((c) {
-            if (_contentFilter == null) return true;
-            return c.type == _contentFilter;
+            if (_selectedType != null && c.type != _selectedType) return false;
+            if (_selectedMoment != null && c.momentTag != _selectedMoment) return false;
+            return true;
           }).toList();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Filters row
+              // Styled pill filter bar matching Search Athletes
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: SizedBox(
-                  height: 40,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildFilterChip('All', null),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Videos', ContentType.video),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Photos', ContentType.photo),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('Posts', ContentType.post),
-                    ],
-                  ),
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: ContentCategoryBar(
+                  selectedType: _selectedType,
+                  selectedMoment: _selectedMoment,
+                  onFilterChanged: (type, moment) {
+                    setState(() {
+                      _selectedType = type;
+                      _selectedMoment = moment;
+                    });
+                  },
                 ),
               ),
               
@@ -105,21 +103,6 @@ class _YourContentScreenState extends ConsumerState<YourContentScreen> {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, ContentType? type) {
-    final isSelected = _contentFilter == type;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (val) {
-        if (val) {
-          setState(() {
-            _contentFilter = type;
-          });
-        }
-      },
     );
   }
 

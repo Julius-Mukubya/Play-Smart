@@ -9,6 +9,7 @@ import 'package:play_smart/messaging/providers/messaging_provider.dart';
 import 'package:play_smart/messaging/repositories/connection_repository.dart';
 import 'package:play_smart/profiles/providers/content_provider.dart';
 import 'package:play_smart/profiles/providers/profile_provider.dart';
+import 'package:play_smart/settings/services/privacy_service.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 import 'package:play_smart/shared/widgets/app_dialog.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
@@ -44,6 +45,50 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
             icon: const Icon(Icons.share),
             onPressed: () {},
           ),
+          Consumer(
+            builder: (context, ref, _) {
+              final authState = ref.watch(authProvider);
+              final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;
+              final isSelf = currentUserId != null && (currentUserId == widget.athleteId);
+              if (isSelf) return const SizedBox.shrink();
+
+              final isBlocked = ref.watch(privacyProvider).blockedUserIds.contains(widget.athleteId);
+
+              return PopupMenuButton<String>(
+                onSelected: (val) {
+                  if (val == 'block') {
+                    if (isBlocked) {
+                      ref.read(privacyProvider.notifier).unblockUser(widget.athleteId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Athlete unblocked.')),
+                      );
+                    } else {
+                      ref.read(privacyProvider.notifier).blockUser(widget.athleteId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Athlete blocked.')),
+                      );
+                    }
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'block',
+                    child: Row(
+                      children: [
+                        Icon(
+                          isBlocked ? Icons.check_circle_outline : Icons.block_outlined,
+                          size: 20,
+                          color: isBlocked ? AppColors.stateSuccess : AppColors.stateError,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(isBlocked ? 'Unblock Athlete' : 'Block Athlete'),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
       body: profileAsync.when(
@@ -60,6 +105,11 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
   }
 
   Widget _buildProfileContent(BuildContext context, ThemeData theme, Athlete athlete) {
+    final privacy = ref.watch(privacyProvider);
+    final authState = ref.watch(authProvider);
+    final currentUserId = authState is AuthAuthenticated ? authState.user.id : null;
+    final isSelf = currentUserId != null && (currentUserId == athlete.userId || currentUserId == athlete.id);
+
     final sportsLabel = athlete.sports.isNotEmpty ? athlete.sports.join(', ') : 'User';
 
     // Calculate metrics
@@ -129,7 +179,7 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                 ],
                 const SizedBox(height: 12),
                 _buildTrustBadge(athlete.profileBadgeLevel),
-                if (athlete.city != null || athlete.country != null) ...[
+                if ((athlete.city != null || athlete.country != null) && (!isSelf || privacy.showLocation)) ...[
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

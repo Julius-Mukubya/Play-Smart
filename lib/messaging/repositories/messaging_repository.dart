@@ -12,15 +12,25 @@ class MessagingRepository {
 
   Future<List<MessageRequest>> getRequestsForUser(String userId) async {
     try {
-      final snap = await _firestore
+      final snapTo = await _firestore
           .collection('chat_threads')
           .where('toUserId', isEqualTo: userId)
           .get();
-      if (snap.docs.isNotEmpty) {
-        return snap.docs.map((d) => _requestFromDoc(d)).toList();
+      final snapFrom = await _firestore
+          .collection('chat_threads')
+          .where('fromUserId', isEqualTo: userId)
+          .get();
+
+      final docs = [...snapTo.docs, ...snapFrom.docs];
+      if (docs.isNotEmpty) {
+        final Map<String, MessageRequest> map = {};
+        for (final d in docs) {
+          map[d.id] = _requestFromDoc(d);
+        }
+        return map.values.toList();
       }
     } catch (_) {}
-    return _requests.where((r) => r.toUserId == userId).toList();
+    return _requests.where((r) => r.toUserId == userId || r.fromUserId == userId).toList();
   }
 
   Future<List<MessageRequest>> getSentRequests(String userId) async {
@@ -41,13 +51,17 @@ class MessagingRepository {
       final snap = await _firestore
           .collection('chat_threads')
           .where('toUserId', isEqualTo: userId)
-          .where('accepted', isEqualTo: false)
+          .where('status', isEqualTo: 'pending')
           .get();
       if (snap.docs.isNotEmpty) {
         return snap.docs.map((d) => _requestFromDoc(d)).toList();
       }
     } catch (_) {}
-    return _requests.where((r) => r.toUserId == userId && !r.accepted).toList();
+    return _requests.where((r) => r.toUserId == userId && r.isPending).toList();
+  }
+
+  Future<List<MessageRequest>> getAllRequests(String userId) async {
+    return getRequestsForUser(userId);
   }
 
   Future<List<MessageRequest>> getConversations(String userId) async {
@@ -65,7 +79,11 @@ class MessagingRepository {
 
       final docs = [...snapTo.docs, ...snapFrom.docs];
       if (docs.isNotEmpty) {
-        return docs.map((d) => _requestFromDoc(d)).toList();
+        final Map<String, MessageRequest> map = {};
+        for (final d in docs) {
+          map[d.id] = _requestFromDoc(d);
+        }
+        return map.values.toList();
       }
     } catch (_) {}
     return _requests.where((r) => (r.toUserId == userId || r.fromUserId == userId) && r.accepted).toList();
@@ -77,9 +95,12 @@ class MessagingRepository {
       await _firestore.collection('chat_threads').doc(request.id).set({
         'fromUserId': request.fromUserId,
         'fromUserName': request.fromUserName,
+        'fromUserPhotoUrl': request.fromUserPhotoUrl,
         'toUserId': request.toUserId,
+        'toUserPhotoUrl': request.toUserPhotoUrl,
         'initialMessage': request.message,
         'accepted': request.accepted,
+        'status': request.status,
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (_) {}
@@ -88,28 +109,40 @@ class MessagingRepository {
 
   Future<MessageRequest> acceptRequest(String requestId) async {
     final idx = _requests.indexWhere((r) => r.id == requestId);
+    MessageRequest? updated;
     if (idx != -1) {
-      final updated = _requests[idx].copyWith(accepted: true);
+      updated = _requests[idx].copyWith(accepted: true, status: 'accepted');
       _requests[idx] = updated;
     }
     try {
-      await _firestore.collection('chat_threads').doc(requestId).update({'accepted': true});
+      await _firestore.collection('chat_threads').doc(requestId).update({
+        'accepted': true,
+        'status': 'accepted',
+      });
     } catch (_) {}
-    return MessageRequest(
-      id: requestId,
-      fromUserId: '',
-      fromUserName: '',
-      toUserId: '',
-      message: '',
-      accepted: true,
-      createdAt: DateTime.now(),
-    );
+    return updated ??
+        MessageRequest(
+          id: requestId,
+          fromUserId: '',
+          fromUserName: '',
+          toUserId: '',
+          message: '',
+          accepted: true,
+          status: 'accepted',
+          createdAt: DateTime.now(),
+        );
   }
 
   Future<void> declineRequest(String requestId) async {
-    _requests.removeWhere((r) => r.id == requestId);
+    final idx = _requests.indexWhere((r) => r.id == requestId);
+    if (idx != -1) {
+      _requests[idx] = _requests[idx].copyWith(accepted: false, status: 'rejected');
+    }
     try {
-      await _firestore.collection('chat_threads').doc(requestId).delete();
+      await _firestore.collection('chat_threads').doc(requestId).update({
+        'accepted': false,
+        'status': 'rejected',
+      });
     } catch (_) {}
   }
 
@@ -160,13 +193,19 @@ class MessagingRepository {
 
   MessageRequest _requestFromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+    final accepted = data['accepted'] as bool? ?? false;
+    final status = data['status'] as String? ?? (accepted ? 'accepted' : 'pending');
+
     return MessageRequest(
       id: doc.id,
       fromUserId: data['fromUserId'] ?? '',
       fromUserName: data['fromUserName'] ?? '',
+      fromUserPhotoUrl: data['fromUserPhotoUrl'],
       toUserId: data['toUserId'] ?? '',
+      toUserPhotoUrl: data['toUserPhotoUrl'],
       message: data['initialMessage'] ?? '',
-      accepted: data['accepted'] ?? false,
+      accepted: status == 'accepted',
+      status: status,
       createdAt: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
