@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
 import 'package:play_smart/core/router/app_router.dart';
+import 'package:play_smart/discovery/screens/discover_screen.dart';
 import 'package:play_smart/notifications/providers/notification_provider.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -121,13 +122,18 @@ class MainShell extends ConsumerWidget {
   }
 
   void _onTap(BuildContext context, WidgetRef ref, int index) {
+    if (index != 0) {
+      ref.read(pauseVideoTriggerProvider.notifier).trigger();
+    }
     if (index == 1 || index == 2 || index == 3 || index == 4) {
       final authState = ref.read(authProvider);
       if (authState is! AuthAuthenticated) {
+        ref.read(pauseVideoTriggerProvider.notifier).trigger();
         context.push(AppRouter.auth);
         return;
       }
     }
+    ref.read(activeShellTabIndexProvider.notifier).set(index);
     // goBranch keeps each tab's own navigation stack alive
     navigationShell.goBranch(
       index,

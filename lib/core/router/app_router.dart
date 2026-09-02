@@ -65,8 +65,11 @@ class AppRouter {
   static const String privacy = '/settings/privacy';
   static const String helpSupport = '/settings/help';
 
+  static final VideoPauseNavigatorObserver videoPauseObserver = VideoPauseNavigatorObserver();
+
   static final GoRouter router = GoRouter(
     initialLocation: splash,
+    observers: [videoPauseObserver],
     routes: [
       // ── Auth routes (outside shell) ─────────────────────────────────────
       GoRoute(path: splash, builder: (_, __) => const SplashScreen()),
@@ -251,5 +254,25 @@ class _PlaceholderScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Navigator observer that triggers video pausing on the Discover feed whenever
+/// another screen is pushed or navigated to.
+class VideoPauseNavigatorObserver extends NavigatorObserver {
+  static void Function()? onNavigate;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (previousRoute != null) {
+      onNavigate?.call();
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    onNavigate?.call();
   }
 }

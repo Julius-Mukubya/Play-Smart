@@ -42,7 +42,8 @@ class DiscoverScreen extends ConsumerStatefulWidget {
   ConsumerState<DiscoverScreen> createState() => _DiscoverScreenState();
 }
 
-class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
+class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
+    with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   bool _isSearching = false;
@@ -52,15 +53,30 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    VideoPauseNavigatorObserver.onNavigate = () {
+      if (mounted) {
+        _pauseActiveVideo(ref);
+      }
+    };
     Future.microtask(
         () => ref.read(discoveryProvider.notifier).loadDiscoverFeed());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    VideoPauseNavigatorObserver.onNavigate = null;
     _pageController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _pauseActiveVideo(ref);
+    }
   }
 
   @override
@@ -1391,6 +1407,7 @@ void _showSavedContentSheet(BuildContext context, WidgetRef ref) {
                               final item = savedItems[idx];
                               return GestureDetector(
                                 onTap: () {
+                                  _pauseActiveVideo(ref);
                                   Navigator.pop(context);
                                   context.push('/athlete/${item.athlete!.id}');
                                 },
@@ -1675,6 +1692,7 @@ class _ErrorView extends StatelessWidget {
 bool _ensureAuthenticated(BuildContext context, WidgetRef ref) {
   final authState = ref.read(authProvider);
   if (authState is! AuthAuthenticated) {
+    _pauseActiveVideo(ref);
     context.push(AppRouter.auth);
     return false;
   }
