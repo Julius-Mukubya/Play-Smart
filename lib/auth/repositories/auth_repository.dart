@@ -145,11 +145,94 @@ class AuthRepository {
     return domain.User(
       id: id,
       name: 'User',
-      email: 'user@playsmart.io',
+      email: 'user@vantra.io',
       role: domain.AccountRole.athlete,
       verificationStatus: domain.VerificationStatus.approved,
       subscriptionTier: domain.SubscriptionTier.free,
     );
+  }
+
+  /// Request phone verification OTP via Firebase Auth
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(domain.User user) onVerificationCompleted,
+    required void Function(String errorMessage) onVerificationFailed,
+    void Function(String verificationId)? onCodeAutoRetrievalTimeout,
+    int? forceResendingToken,
+  }) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        forceResendingToken: forceResendingToken,
+        timeout: const Duration(seconds: 60),
+        verificationCompleted: (fb.PhoneAuthCredential credential) async {
+          try {
+            final userCredential = await _auth.signInWithCredential(credential);
+            final fbUser = userCredential.user;
+            if (fbUser != null) {
+              final user = domain.User(
+                id: fbUser.uid,
+                name: fbUser.displayName ?? (fbUser.phoneNumber ?? 'VANTRA User'),
+                email: fbUser.email ?? (fbUser.phoneNumber ?? ''),
+                role: domain.AccountRole.athlete,
+                verificationStatus: domain.VerificationStatus.approved,
+                subscriptionTier: domain.SubscriptionTier.free,
+              );
+              onVerificationCompleted(user);
+            }
+          } catch (e) {
+            onVerificationFailed(e.toString());
+          }
+        },
+        verificationFailed: (fb.FirebaseAuthException e) {
+          onVerificationFailed(e.message ?? e.toString());
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          onCodeSent(verificationId, resendToken);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          onCodeAutoRetrievalTimeout?.call(verificationId);
+        },
+      );
+    } catch (e) {
+      onVerificationFailed(e.toString());
+    }
+  }
+
+  /// Confirm phone verification OTP and sign in
+  Future<domain.User> signInWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+    String? name,
+    domain.AccountRole? role,
+  }) async {
+    try {
+      final credential = fb.PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      final userCredential = await _auth.signInWithCredential(credential);
+      final fbUser = userCredential.user;
+      if (fbUser == null) {
+        throw AuthException('Failed to sign in with phone code.');
+      }
+
+      if (name != null && name.isNotEmpty) {
+        await fbUser.updateDisplayName(name);
+      }
+
+      return domain.User(
+        id: fbUser.uid,
+        name: fbUser.displayName ?? (name ?? fbUser.phoneNumber ?? 'VANTRA User'),
+        email: fbUser.email ?? (fbUser.phoneNumber ?? ''),
+        role: role ?? domain.AccountRole.athlete,
+        verificationStatus: domain.VerificationStatus.approved,
+        subscriptionTier: domain.SubscriptionTier.free,
+      );
+    } catch (e) {
+      throw AuthException(e.toString());
+    }
   }
 }
 

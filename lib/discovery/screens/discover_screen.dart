@@ -11,8 +11,8 @@ import 'package:play_smart/core/shell/main_shell.dart';
 import 'package:play_smart/core/theme/app_theme.dart';
 import 'package:play_smart/discovery/models/feed_item.dart';
 import 'package:play_smart/discovery/providers/discovery_provider.dart';
+import 'package:play_smart/discovery/services/video_preload_manager.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
-import 'package:play_smart/shared/widgets/trust_badge.dart';
 import 'package:play_smart/shared/widgets/content_thumbnail.dart';
 import 'package:video_player/video_player.dart';
 
@@ -31,7 +31,9 @@ final pauseVideoTriggerProvider =
 );
 
 void _pauseActiveVideo(WidgetRef ref) {
-  ref.read(pauseVideoTriggerProvider.notifier).trigger();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    ref.read(pauseVideoTriggerProvider.notifier).trigger();
+  });
 }
 
 /// Swipe LEFT for next content, swipe RIGHT for previous.
@@ -45,6 +47,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     with WidgetsBindingObserver {
   final PageController _pageController = PageController();
+  final VideoPreloadManager _preloadManager = VideoPreloadManager(maxPreloadDistance: 1);
   int _currentPage = 0;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -56,6 +59,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     WidgetsBinding.instance.addObserver(this);
     VideoPauseNavigatorObserver.onNavigate = () {
       if (mounted) {
+        _preloadManager.pauseAll();
         _pauseActiveVideo(ref);
       }
     };
@@ -69,18 +73,26 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
     VideoPauseNavigatorObserver.onNavigate = null;
     _pageController.dispose();
     _searchController.dispose();
+    _preloadManager.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _preloadManager.pauseAll();
       _pauseActiveVideo(ref);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<DiscoveryState>(discoveryProvider, (prev, next) {
+      if (next.feedItems.isNotEmpty && next.feedItems != prev?.feedItems) {
+        _preloadManager.setFeedItems(next.feedItems);
+      }
+    });
+
     final state = ref.watch(discoveryProvider);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -109,6 +121,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
       return const _EmptyView();
     }
 
+    if (state.feedItems.isNotEmpty && _preloadManager.items != state.feedItems) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _preloadManager.setFeedItems(state.feedItems);
+        }
+      });
+    }
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -117,9 +137,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
           controller: _pageController,
           scrollDirection: Axis.vertical,
           itemCount: state.feedItems.length,
-          onPageChanged: (i) => setState(() => _currentPage = i),
+          onPageChanged: (i) {
+            setState(() => _currentPage = i);
+            _preloadManager.setCurrentIndex(i);
+          },
           itemBuilder: (ctx, i) => _FullScreenCard(
             item: state.feedItems[i],
+            index: i,
+            currentIndex: _currentPage,
+            preloadManager: _preloadManager,
             isActive: i == _currentPage,
           ),
         ),
@@ -239,18 +265,39 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen>
 
 class _FullScreenCard extends ConsumerStatefulWidget {
   final FeedItem item;
+  final int index;
+  final int currentIndex;
+  final VideoPreloadManager preloadManager;
   final bool isActive;
-  const _FullScreenCard({required this.item, required this.isActive});
+
+  const _FullScreenCard({
+    required this.item,
+    required this.index,
+    required this.currentIndex,
+    required this.preloadManager,
+    required this.isActive,
+  });
 
   @override
   ConsumerState<_FullScreenCard> createState() => _FullScreenCardState();
 }
 
 class _FullScreenCardState extends ConsumerState<_FullScreenCard>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late AnimationController _heartCtrl;
   late Animation<double> _heartScale;
   bool _showHeart = false;
+
+  @override
+  bool get wantKeepAlive => (widget.index - widget.currentIndex).abs() <= 1;
+
+  @override
+  void didUpdateWidget(covariant _FullScreenCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      updateKeepAlive();
+    }
+  }
 
   @override
   void initState() {
@@ -378,6 +425,7 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final item = widget.item;
     if (item.isAd) {
       return _buildAdCard(context, item);
@@ -404,7 +452,12 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
         fit: StackFit.expand,
         children: [
           // Media background
-          _MediaBackground(item: item, isActive: visible),
+          _MediaBackground(
+            item: item,
+            index: widget.index,
+            preloadManager: widget.preloadManager,
+            isActive: visible,
+          ),
 
           // Bottom gradient vignette
           Positioned(
@@ -472,8 +525,16 @@ class _FullScreenCardState extends ConsumerState<_FullScreenCard>
 
 class _MediaBackground extends StatelessWidget {
   final FeedItem item;
+  final int index;
+  final VideoPreloadManager preloadManager;
   final bool isActive;
-  const _MediaBackground({required this.item, required this.isActive});
+
+  const _MediaBackground({
+    required this.item,
+    required this.index,
+    required this.preloadManager,
+    required this.isActive,
+  });
 
   Widget _placeholderGradient(IconData icon) {
     final athlete = item.athlete!;
@@ -503,7 +564,13 @@ class _MediaBackground extends StatelessWidget {
       if (content.fileUrl == null) {
         return _placeholderGradient(Icons.play_circle_fill);
       }
-      return _VideoBackground(url: content.fileUrl!, isActive: isActive);
+      return _VideoBackground(
+        url: content.fileUrl!,
+        thumbnailUrl: content.thumbnailUrl,
+        index: index,
+        preloadManager: preloadManager,
+        isActive: isActive,
+      );
     }
 
     // ── Photo / Image Content ──────────────────
@@ -565,61 +632,134 @@ class _MediaBackground extends StatelessWidget {
 /// the card becomes freshly visible again (a new "view" autoplays).
 class _VideoBackground extends ConsumerStatefulWidget {
   final String url;
+  final String? thumbnailUrl;
+  final int index;
+  final VideoPreloadManager? preloadManager;
   final bool isActive;
-  const _VideoBackground({required this.url, required this.isActive});
+
+  const _VideoBackground({
+    required this.url,
+    this.thumbnailUrl,
+    required this.index,
+    this.preloadManager,
+    required this.isActive,
+  });
 
   @override
   ConsumerState<_VideoBackground> createState() => _VideoBackgroundState();
 }
 
 class _VideoBackgroundState extends ConsumerState<_VideoBackground> {
-  late final VideoPlayerController _controller;
+  VideoPlayerController? _controller;
+  bool _ownsController = false;
   bool _initialized = false;
   bool _failed = false;
   bool _userPaused = false;
+  bool _fitMode = true; // true = contain (full clip visible, no magnification), false = cover (fill)
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    _controller
-      ..setLooping(true)
-      ..initialize().then((_) {
-        if (!mounted) return;
-        setState(() => _initialized = true);
-        if (widget.isActive) _controller.play();
-      }).catchError((_) {
-        if (mounted) setState(() => _failed = true);
-      });
+    _initOrAttachController();
+  }
+
+  void _initOrAttachController() {
+    if (widget.preloadManager != null) {
+      widget.preloadManager!.addListener(_onPreloadManagerUpdate);
+      final managerCtrl = widget.preloadManager!.getController(widget.index);
+      if (managerCtrl != null) {
+        _controller = managerCtrl;
+        _ownsController = false;
+        if (managerCtrl.value.isInitialized) {
+          _initialized = true;
+          if (widget.isActive && !_userPaused) {
+            _controller!.play();
+          }
+        } else if (managerCtrl.value.hasError || widget.preloadManager!.hasError(widget.index)) {
+          _failed = true;
+        }
+      }
+    } else {
+      // Standalone controller fallback
+      _ownsController = true;
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _controller!
+        ..setLooping(true)
+        ..initialize().then((_) {
+          if (!mounted) return;
+          setState(() => _initialized = true);
+          if (widget.isActive && !_userPaused) _controller!.play();
+        }).catchError((_) {
+          if (mounted) setState(() => _failed = true);
+        });
+    }
+  }
+
+  void _onPreloadManagerUpdate() {
+    if (!mounted || widget.preloadManager == null) return;
+    final managerCtrl = widget.preloadManager!.getController(widget.index);
+    if (managerCtrl != _controller) {
+      _controller = managerCtrl;
+    }
+    if (_controller != null) {
+      final isInit = _controller!.value.isInitialized;
+      final hasErr = _controller!.value.hasError || widget.preloadManager!.hasError(widget.index);
+      if (hasErr && !_failed) {
+        setState(() => _failed = true);
+      } else if (isInit && !_initialized) {
+        setState(() {
+          _initialized = true;
+          _failed = false;
+        });
+        if (widget.isActive && !_userPaused) {
+          _controller!.play();
+        }
+      }
+    }
   }
 
   @override
   void didUpdateWidget(covariant _VideoBackground oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.preloadManager != widget.preloadManager || oldWidget.index != widget.index) {
+      oldWidget.preloadManager?.removeListener(_onPreloadManagerUpdate);
+      _initOrAttachController();
+    }
+
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
         // Freshly visible again — treat as a new view and autoplay,
         // regardless of an earlier manual pause.
         _userPaused = false;
-        if (_initialized) _controller.play();
-      } else if (_initialized) {
-        _controller.pause();
+        if (_initialized && _controller != null) {
+          _controller!.play();
+        }
+      } else if (_initialized && _controller != null) {
+        _controller!.pause();
       }
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    widget.preloadManager?.removeListener(_onPreloadManagerUpdate);
+    if (_ownsController) {
+      _controller?.dispose();
+    } else {
+      // Pause if playing so audio does not leak while controller is kept in pool
+      if (_controller != null && _controller!.value.isPlaying) {
+        _controller!.pause();
+      }
+    }
     super.dispose();
   }
 
   void _togglePause() {
     setState(() => _userPaused = !_userPaused);
     if (_userPaused) {
-      _controller.pause();
+      _controller?.pause();
     } else if (widget.isActive) {
-      _controller.play();
+      _controller?.play();
     }
   }
 
@@ -629,23 +769,64 @@ class _VideoBackgroundState extends ConsumerState<_VideoBackground> {
       if (next != prev && _initialized && widget.isActive) {
         if (!_userPaused) {
           setState(() => _userPaused = true);
-          _controller.pause();
+          _controller?.pause();
         }
       }
     });
 
-    if (_failed) {
-      return const ColoredBox(
-        color: Color(0xFF0D1117),
-        child: Center(
-          child: Icon(Icons.error_outline, size: 64, color: Colors.white30),
+    Widget buildThumbnail() {
+      if (widget.thumbnailUrl == null || widget.thumbnailUrl!.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Center(
+        child: ClipRect(
+          child: FittedBox(
+            fit: _fitMode ? BoxFit.contain : BoxFit.cover,
+            child: CachedNetworkImage(
+              imageUrl: widget.thumbnailUrl!,
+              fit: _fitMode ? BoxFit.contain : BoxFit.cover,
+              placeholder: (_, __) => const SizedBox.shrink(),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
         ),
       );
     }
-    if (!_initialized) {
-      return const ColoredBox(
-        color: Color(0xFF0D1117),
-        child: Center(child: CircularProgressIndicator(color: Colors.white54)),
+
+    if (_failed) {
+      return ColoredBox(
+        color: const Color(0xFF0D1117),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            buildThumbnail(),
+            const Center(
+              child: Icon(Icons.error_outline, size: 64, color: Colors.white30),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!_initialized || _controller == null) {
+      return ColoredBox(
+        color: const Color(0xFF0D1117),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            buildThumbnail(),
+            const Center(
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(
+                  color: Colors.white70,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -653,36 +834,91 @@ class _VideoBackgroundState extends ConsumerState<_VideoBackground> {
 
     return GestureDetector(
       onTap: _togglePause,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRect(
-            child: FittedBox(
-              fit: BoxFit.cover,
-              clipBehavior: Clip.hardEdge,
-              child: SizedBox(
-                width: _controller.value.size.width,
-                height: _controller.value.size.height,
-                child: VideoPlayer(_controller),
-              ),
-            ),
-          ),
-          if (paused)
+      child: Container(
+        color: const Color(0xFF0D1117),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
             Center(
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.play_arrow_rounded,
-                  color: Colors.white,
-                  size: 48,
+              child: ClipRect(
+                child: FittedBox(
+                  fit: _fitMode ? BoxFit.contain : BoxFit.cover,
+                  clipBehavior: Clip.hardEdge,
+                  child: SizedBox(
+                    width: _controller!.value.size.width > 0 ? _controller!.value.size.width : 16,
+                    height: _controller!.value.size.height > 0 ? _controller!.value.size.height : 9,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (widget.thumbnailUrl != null && widget.thumbnailUrl!.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl: widget.thumbnailUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const SizedBox.shrink(),
+                            errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        VideoPlayer(_controller!),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-        ],
+            // Fit / Fill toggle button
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 52,
+              right: 14,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() => _fitMode = !_fitMode);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white24, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _fitMode ? Icons.fit_screen_rounded : Icons.fullscreen_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _fitMode ? 'Fit' : 'Fill',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (paused)
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.play_arrow_rounded,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1297,16 +1533,22 @@ class _TopBar extends ConsumerWidget {
             )
           : Row(
               children: [
-                const Text('Play',
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.asset(
+                    'lib/assets/images/logo_mark.png',
+                    height: 28,
+                    width: 28,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text('VANTRA',
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
-                Text('Smart',
-                    style: TextStyle(
-                        color: AppColors.accentLight,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800)),
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 3)),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded,

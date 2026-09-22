@@ -68,7 +68,7 @@ class _PrivacySafetyScreenState extends ConsumerState<PrivacySafetyScreen> {
             icon: Icons.bar_chart_outlined,
             title: 'Analytics & Insights',
             subtitle:
-                'Allow Play Smart to collect usage data to improve your experience',
+                'Allow VANTRA to collect usage data to improve your experience',
             value: privacy.analyticsOptIn,
             onChanged: (v) => privacyNotifier.setAnalyticsOptIn(v),
             theme: theme,
@@ -601,7 +601,7 @@ Last updated: June 2026
 We collect information you provide directly, such as your name, email address, date of birth, and athlete profile data. We also collect usage data when you interact with the platform.
 
 2. How We Use Your Information
-Your information is used to operate and improve Play Smart, connect athletes with recruiters and clubs, and send relevant notifications. We do not sell your personal data to third parties.
+Your information is used to operate and improve VANTRA, connect athletes with recruiters and clubs, and send relevant notifications. We do not sell your personal data to third parties.
 
 3. Profile Visibility
 Your public profile is visible to all users including guests unless you restrict it in your privacy settings. Private notes added by recruiters are never visible to athletes.
@@ -620,13 +620,13 @@ const _termsOfService = '''
 Last updated: June 2026
 
 1. Acceptance
-By using Play Smart, you agree to these terms. If you do not agree, do not use the platform.
+By using VANTRA, you agree to these terms. If you do not agree, do not use the platform.
 
 2. Accounts
 You are responsible for maintaining the security of your account. Athletes, recruiters, and clubs must provide accurate information during registration.
 
 3. Content
-Athletes retain ownership of content they upload. By posting, you grant Play Smart a licence to display it on the platform. You may not upload content you do not own.
+Athletes retain ownership of content they upload. By posting, you grant VANTRA a licence to display it on the platform. You may not upload content you do not own.
 
 4. Prohibited Conduct
 You may not impersonate others, post false information, harass other users, or attempt to circumvent the trust badge system.

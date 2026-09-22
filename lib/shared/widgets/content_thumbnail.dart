@@ -46,6 +46,7 @@ class ContentThumbnail extends StatelessWidget {
             CachedNetworkImage(
               imageUrl: imageUrl,
               fit: BoxFit.cover,
+              memCacheWidth: 400,
               placeholder: (_, __) => _iconFallback(theme),
               errorWidget: (_, __, ___) => _iconFallback(theme),
             )

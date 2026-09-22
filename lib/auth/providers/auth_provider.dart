@@ -156,6 +156,59 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  /// Request phone verification OTP SMS.
+  Future<void> sendPhoneOtp({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(String error) onError,
+    int? forceResendingToken,
+  }) async {
+    try {
+      await _authService.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        forceResendingToken: forceResendingToken,
+        onCodeSent: onCodeSent,
+        onVerificationCompleted: (user) async {
+          await _saveUserLocally(user);
+          state = AuthAuthenticated(user: user);
+          await PushNotificationService.instance.registerToken(user.id);
+          await ref.read(knownAccountsStoreProvider).remember(user);
+        },
+        onVerificationFailed: (err) {
+          onError(err);
+        },
+      );
+    } catch (e) {
+      onError(e.toString());
+    }
+  }
+
+  /// Verify phone OTP code and complete sign in / registration.
+  Future<void> verifyPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+    String? name,
+    AccountRole? role,
+  }) async {
+    state = const AuthLoading();
+    try {
+      final user = await _authService.signInWithPhoneOtp(
+        verificationId: verificationId,
+        smsCode: smsCode,
+        name: name,
+        role: role,
+      );
+      await _saveUserLocally(user);
+      state = AuthAuthenticated(user: user);
+      await PushNotificationService.instance.registerToken(user.id);
+      await ref.read(knownAccountsStoreProvider).remember(user);
+    } on AuthException catch (e) {
+      state = AuthError(message: e.message);
+    } catch (_) {
+      state = const AuthError(message: 'Phone verification failed. Please try again.');
+    }
+  }
+
   /// Sign out the current user.
   Future<void> signOut() async {
     state = const AuthLoading();

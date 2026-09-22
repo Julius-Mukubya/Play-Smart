@@ -52,8 +52,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Play Smart',
-              style: theme.textTheme.displayMedium,
+              'VANTRA',
+              style: theme.textTheme.displayMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: 4,
+              ),
             ),
             const SizedBox(height: 32),
             const CircularProgressIndicator(),

@@ -24,6 +24,40 @@ class AuthService {
     return _repository.signInWithGoogle();
   }
 
+  /// Request phone verification OTP via SMS.
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(User user) onVerificationCompleted,
+    required void Function(String errorMessage) onVerificationFailed,
+    void Function(String verificationId)? onCodeAutoRetrievalTimeout,
+    int? forceResendingToken,
+  }) async {
+    return _repository.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      onCodeSent: onCodeSent,
+      onVerificationCompleted: onVerificationCompleted,
+      onVerificationFailed: onVerificationFailed,
+      onCodeAutoRetrievalTimeout: onCodeAutoRetrievalTimeout,
+      forceResendingToken: forceResendingToken,
+    );
+  }
+
+  /// Confirm phone verification OTP.
+  Future<User> signInWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+    String? name,
+    AccountRole? role,
+  }) async {
+    return _repository.signInWithPhoneOtp(
+      verificationId: verificationId,
+      smsCode: smsCode,
+      name: name,
+      role: role,
+    );
+  }
+
   /// Sign out the current user.
   Future<void> signOut() async {
     await _repository.signOut();

@@ -120,6 +120,54 @@ void main() {
       await repository.signOut();
       expect(repository.hasSession, false);
     });
+
+    test('verifyPhoneNumber sends OTP code for valid phone', () async {
+      String? sentVerificationId;
+      await repository.verifyPhoneNumber(
+        phoneNumber: '+256700123456',
+        onCodeSent: (vId, token) {
+          sentVerificationId = vId;
+        },
+        onVerificationCompleted: (_) {},
+        onVerificationFailed: (_) {},
+      );
+      expect(sentVerificationId, isNotNull);
+    });
+
+    test('verifyPhoneNumber fails for invalid short phone number', () async {
+      String? failureMessage;
+      await repository.verifyPhoneNumber(
+        phoneNumber: '123',
+        onCodeSent: (_, __) {},
+        onVerificationCompleted: (_) {},
+        onVerificationFailed: (msg) {
+          failureMessage = msg;
+        },
+      );
+      expect(failureMessage, 'Invalid phone number.');
+    });
+
+    test('signInWithPhoneOtp succeeds with valid code', () async {
+      final user = await repository.signInWithPhoneOtp(
+        verificationId: 'test-v-id',
+        smsCode: '123456',
+        name: 'Phone Athlete',
+        role: AccountRole.athlete,
+      );
+      expect(user.name, 'Phone Athlete');
+      expect(user.role, AccountRole.athlete);
+      expect(repository.hasSession, true);
+    });
+
+    test('signInWithPhoneOtp fails with invalid code', () async {
+      expect(
+        () async => await repository.signInWithPhoneOtp(
+          verificationId: 'test-v-id',
+          smsCode: '999',
+        ),
+        throwsA(isA<AuthException>()),
+      );
+    });
   });
 
   group('AuthService', () {

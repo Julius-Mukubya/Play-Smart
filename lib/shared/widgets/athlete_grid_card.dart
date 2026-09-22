@@ -53,6 +53,7 @@ class AthleteGridCard extends ConsumerWidget {
                     CachedNetworkImage(
                       imageUrl: athlete.photoUrl!,
                       fit: BoxFit.cover,
+                      memCacheWidth: 600,
                       placeholder: (_, __) => _avatarFallback(theme),
                       errorWidget: (_, __, ___) => _avatarFallback(theme),
                     )

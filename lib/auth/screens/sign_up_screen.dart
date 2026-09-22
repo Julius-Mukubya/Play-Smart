@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:play_smart/auth/models/auth_state.dart';
 import 'package:play_smart/auth/providers/auth_provider.dart';
+import 'package:play_smart/auth/widgets/phone_auth_bottom_sheet.dart';
 import 'package:play_smart/core/router/app_router.dart';
 import 'package:play_smart/shared/types/domain_types.dart';
 
@@ -81,7 +82,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       children: [
                         const SizedBox(height: 8),
                         Text(
-                          'Join Play Smart',
+                          'Join VANTRA',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -283,6 +284,43 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                           label: const Text(
                             'Continue with Google',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: theme.colorScheme.onSurface,
+                            backgroundColor: theme.colorScheme.surface,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Continue with Phone Button
+                        OutlinedButton.icon(
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  PhoneAuthBottomSheet.show(
+                                    context,
+                                    isSignUp: true,
+                                    initialRole: _selectedRole,
+                                    onSuccess: () {
+                                      if (mounted) context.go(AppRouter.discover);
+                                    },
+                                  );
+                                },
+                          icon: Icon(
+                            Icons.phone_iphone_rounded,
+                            size: 22,
+                            color: theme.colorScheme.primary,
+                          ),
+                          label: const Text(
+                            'Continue with Phone',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                           style: OutlinedButton.styleFrom(

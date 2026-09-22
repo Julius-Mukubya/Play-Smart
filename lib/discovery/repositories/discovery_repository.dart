@@ -15,6 +15,7 @@ class DiscoveryRepository {
   final Set<String> _likedContentIds = {};
   final Set<String> _savedContentIds = {};
   final Map<String, List<Comment>> _commentsStore = {};
+  final Map<String, Athlete> _userProfileCache = {};
 
   DiscoveryRepository({
     ProfileRepository? profileRepository,
@@ -26,20 +27,68 @@ class DiscoveryRepository {
 
   Future<List<Athlete>> getDiscoverFeed() async {
     final athletes = await _profileRepository.getAllAthletes();
-    final List<Athlete> enriched = [];
-    for (final athlete in athletes) {
-      final contentList = await _contentRepository.getContentByAthleteId(athlete.id);
-      enriched.add(athlete.copyWith(content: contentList));
-    }
+    final enriched = await Future.wait(
+      athletes.map((athlete) async {
+        final contentList = await _contentRepository.getContentByAthleteId(athlete.id);
+        return athlete.copyWith(content: contentList);
+      }),
+    );
     return enriched;
   }
 
   Future<List<FeedItem>> getContentFeed({String? currentUserId}) async {
-    final allContent = await _contentRepository.getAllContent();
-    final athletes = await _profileRepository.getAllAthletes();
-    final Map<String, Athlete> athleteMap = {for (final a in athletes) a.id: a};
+    final results = await Future.wait([
+      _contentRepository.getAllContent(),
+      _profileRepository.getAllAthletes(),
+    ]);
+
+    final allContent = results[0] as List<AthleteContent>;
+    final athletes = results[1] as List<Athlete>;
+
+    final Map<String, Athlete> athleteMap = {
+      ..._userProfileCache,
+      for (final a in athletes) a.id: a,
+    };
     for (final a in athletes) {
       athleteMap[a.userId] = a;
+      _userProfileCache[a.id] = a;
+      _userProfileCache[a.userId] = a;
+    }
+
+    // Collect athlete IDs that need lookup
+    final missingIds = allContent
+        .map((c) => c.athleteId)
+        .where((id) => !athleteMap.containsKey(id))
+        .toSet();
+
+    if (missingIds.isNotEmpty) {
+      await Future.wait(missingIds.map((missingId) async {
+        Athlete? athlete = await _profileRepository.getAthleteById(missingId) ??
+            await _profileRepository.getAthleteByUserId(missingId);
+
+        if (athlete == null) {
+          try {
+            final userDoc = await _firestore.collection('users').doc(missingId).get();
+            if (userDoc.exists && userDoc.data() != null) {
+              final data = userDoc.data()!;
+              athlete = Athlete(
+                id: missingId,
+                userId: missingId,
+                displayName: (data['displayName'] ?? data['name'] ?? 'Athlete') as String,
+                photoUrl: (data['photoUrl'] ?? data['avatarUrl'] ?? data['photo_url']) as String?,
+                sports: List<String>.from(data['sports'] ?? ['Football']),
+                positions: List<String>.from(data['positions'] ?? ['Player']),
+                bio: (data['bio'] ?? '') as String,
+              );
+            }
+          } catch (_) {}
+        }
+
+        if (athlete != null) {
+          athleteMap[missingId] = athlete;
+          _userProfileCache[missingId] = athlete;
+        }
+      }));
     }
 
     final List<FeedItem> feed = [];
@@ -47,32 +96,6 @@ class DiscoveryRepository {
 
     for (final c in allContent) {
       Athlete? athlete = athleteMap[c.athleteId];
-      if (athlete == null) {
-        athlete = await _profileRepository.getAthleteById(c.athleteId) ??
-                  await _profileRepository.getAthleteByUserId(c.athleteId);
-        if (athlete != null) {
-          athleteMap[c.athleteId] = athlete;
-        }
-      }
-
-      if (athlete == null) {
-        try {
-          final userDoc = await _firestore.collection('users').doc(c.athleteId).get();
-          if (userDoc.exists && userDoc.data() != null) {
-            final data = userDoc.data()!;
-            athlete = Athlete(
-              id: c.athleteId,
-              userId: c.athleteId,
-              displayName: (data['displayName'] ?? data['name'] ?? 'Athlete') as String,
-              photoUrl: (data['photoUrl'] ?? data['avatarUrl'] ?? data['photo_url']) as String?,
-              sports: List<String>.from(data['sports'] ?? ['Football']),
-              positions: List<String>.from(data['positions'] ?? ['Player']),
-              bio: (data['bio'] ?? '') as String,
-            );
-            athleteMap[c.athleteId] = athlete;
-          }
-        } catch (_) {}
-      }
 
       athlete ??= Athlete(
         id: c.athleteId,
@@ -80,7 +103,7 @@ class DiscoveryRepository {
         displayName: 'Athlete',
         sports: ['Football'],
         positions: ['Player'],
-        bio: 'Athlete profile on Play Smart.',
+        bio: 'Athlete profile on VANTRA.',
         profileBadgeLevel: TrustBadgeLevel.selfReported,
         availabilityStatus: AvailabilityStatus.openToTrials,
       );

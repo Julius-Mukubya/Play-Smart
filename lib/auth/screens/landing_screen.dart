@@ -25,8 +25,11 @@ class LandingScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Play Smart',
-                style: theme.textTheme.displayMedium,
+                'VANTRA',
+                style: theme.textTheme.displayMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),

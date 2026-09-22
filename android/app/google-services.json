@@ -12,7 +12,28 @@
           "package_name": "com.elitescout.play_smart"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "711252118138-2a8mkt3b86pa6mgdblcornj36bffuvcu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.elitescout.play_smart",
+            "certificate_hash": "e88dcbd8537c2b9b7798764a7e2541b9fc77dfa9"
+          }
+        },
+        {
+          "client_id": "711252118138-3nhuii2nc1hhei8c6a3pso30eklcupoe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.elitescout.play_smart",
+            "certificate_hash": "8961ecda9fe07dde1c4b62c43463a6dee2a74808"
+          }
+        },
+        {
+          "client_id": "711252118138-l50kb9f3ecv6101r2cilgiv7voj5fc0h.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDqZiyJmijr_XjGRrLN7Ah6GLqukjLxMrQ"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "711252118138-l50kb9f3ecv6101r2cilgiv7voj5fc0h.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "711252118138-27jimhr5f6ujm0ru45fs99vnvhge4v82.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.elitescout.playSmart"
+              }
+            }
+          ]
         }
       }
     }

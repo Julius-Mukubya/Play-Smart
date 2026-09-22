@@ -96,4 +96,44 @@ class MockAuthRepository {
       return null;
     }
   }
+
+  /// Mock phone verification
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required void Function(String verificationId, int? resendToken) onCodeSent,
+    required void Function(User user) onVerificationCompleted,
+    required void Function(String errorMessage) onVerificationFailed,
+    void Function(String verificationId)? onCodeAutoRetrievalTimeout,
+    int? forceResendingToken,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    if (phoneNumber.isEmpty || phoneNumber.length < 9) {
+      onVerificationFailed('Invalid phone number.');
+      return;
+    }
+    onCodeSent('mock-verification-id-${DateTime.now().millisecondsSinceEpoch}', 12345);
+  }
+
+  /// Mock phone OTP confirmation
+  Future<User> signInWithPhoneOtp({
+    required String verificationId,
+    required String smsCode,
+    String? name,
+    AccountRole? role,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 50));
+    if (smsCode != '123456' && smsCode.length != 6) {
+      throw AuthException('Invalid verification code.');
+    }
+    final user = User(
+      id: 'user-phone-${DateTime.now().millisecondsSinceEpoch}',
+      name: name ?? 'Phone User',
+      email: 'phone@vantra.io',
+      role: role ?? AccountRole.athlete,
+      verificationStatus: VerificationStatus.approved,
+    );
+    _users.add(user);
+    _currentUser = user;
+    return user;
+  }
 }

@@ -30,7 +30,7 @@ void main() {
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 
-  testWidgets('Splash screen shows Play Smart branding',
+  testWidgets('Splash screen shows VANTRA branding',
       (WidgetTester tester) async {
     AppRouter.router.go(AppRouter.splash);
     await tester.pumpWidget(
@@ -43,6 +43,6 @@ void main() {
     );
 
     // Verify the splash screen displays the app name
-    expect(find.text('Play Smart'), findsOneWidget);
+    expect(find.text('VANTRA'), findsOneWidget);
   });
 }

@@ -266,13 +266,17 @@ class VideoPauseNavigatorObserver extends NavigatorObserver {
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
     if (previousRoute != null) {
-      onNavigate?.call();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onNavigate?.call();
+      });
     }
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    onNavigate?.call();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onNavigate?.call();
+    });
   }
 }
