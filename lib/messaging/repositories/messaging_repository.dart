@@ -90,8 +90,27 @@ class MessagingRepository {
   }
 
   Future<MessageRequest> sendRequest(MessageRequest request) async {
+    final existingIdx = _requests.indexWhere((r) =>
+        r.fromUserId == request.fromUserId &&
+        r.toUserId == request.toUserId &&
+        !r.accepted);
+    if (existingIdx != -1) {
+      return _requests[existingIdx];
+    }
+
     _requests.add(request);
     try {
+      final existingDocs = await _firestore
+          .collection('chat_threads')
+          .where('fromUserId', isEqualTo: request.fromUserId)
+          .where('toUserId', isEqualTo: request.toUserId)
+          .where('accepted', isEqualTo: false)
+          .limit(1)
+          .get();
+      if (existingDocs.docs.isNotEmpty) {
+        return request;
+      }
+
       await _firestore.collection('chat_threads').doc(request.id).set({
         'fromUserId': request.fromUserId,
         'fromUserName': request.fromUserName,

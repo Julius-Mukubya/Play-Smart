@@ -39,7 +39,7 @@ class PushNotificationService {
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'play_smart_default',
-              'Play Smart notifications',
+              'VANTRA notifications',
               importance: Importance.high,
               priority: Priority.high,
             ),

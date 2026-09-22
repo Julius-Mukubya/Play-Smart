@@ -10,19 +10,33 @@ class ConnectionRepository {
       : _firestore = firestore ?? FirebaseFirestore.instance;
 
   Future<FriendRequest> sendRequest(String senderId, String receiverId) async {
-    final docRef = _firestore.collection('friend_requests').doc();
+    final docId = '${senderId}_$receiverId';
+
+    // 1. Check in-memory cache
+    if (_ephemeralRequests.containsKey(docId)) {
+      return _ephemeralRequests[docId]!;
+    }
+
+    // 2. Check if a request already exists between sender and receiver
+    final existing = await getRequestStatus(senderId, receiverId);
+    if (existing != null) {
+      _ephemeralRequests[docId] = existing;
+      return existing;
+    }
+
+    final docRef = _firestore.collection('friend_requests').doc(docId);
     final request = FriendRequest(
-      id: docRef.id,
+      id: docId,
       senderId: senderId,
       receiverId: receiverId,
       status: ConnectionStatus.pending,
       createdAt: DateTime.now(),
     );
 
-    _ephemeralRequests['${senderId}_$receiverId'] = request;
+    _ephemeralRequests[docId] = request;
 
     try {
-      await docRef.set(request.toFirestore());
+      await docRef.set(request.toFirestore(), SetOptions(merge: true));
     } catch (_) {
       // Ephemeral fallback
     }

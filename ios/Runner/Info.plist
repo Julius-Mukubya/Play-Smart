@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Play Smart</string>
+	<string>VANTRA</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -46,8 +46,8 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Play Smart needs access to your photo library to upload highlight videos and photos.</string>
+	<string>VANTRA needs access to your photo library to upload highlight videos and photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Play Smart needs access to save compressed videos during upload.</string>
+	<string>VANTRA needs access to save compressed videos during upload.</string>
 </dict>
 </plist>

@@ -27,6 +27,7 @@ class AthleteProfileScreen extends ConsumerStatefulWidget {
 
 class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
   ContentType? _contentFilter;
+  bool _isSendingFriendRequest = false;
 
   @override
   void initState() {
@@ -301,24 +302,41 @@ class _AthleteProfileScreenState extends ConsumerState<AthleteProfileScreen> {
                     }
 
                     return ElevatedButton.icon(
-                      onPressed: () async {
-                        await connectionRepo.sendRequest(currentUserId, athlete.userId);
-                        await ref.read(messagingProvider.notifier).sendRequest(
-                          athlete.userId,
-                          "Friend Request",
-                        );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Friend Request Sent Successfully!'),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          setState(() {});
-                        }
-                      },
-                      icon: const Icon(Icons.person_add_alt_1_outlined),
-                      label: const Text('Send Friend Request'),
+                      onPressed: _isSendingFriendRequest
+                          ? null
+                          : () async {
+                              setState(() => _isSendingFriendRequest = true);
+                              try {
+                                await connectionRepo.sendRequest(currentUserId, athlete.userId);
+                                await ref.read(messagingProvider.notifier).sendRequest(
+                                  athlete.userId,
+                                  "Friend Request",
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Friend Request Sent Successfully!'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isSendingFriendRequest = false);
+                                }
+                              }
+                            },
+                      icon: _isSendingFriendRequest
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.person_add_alt_1_outlined),
+                      label: Text(_isSendingFriendRequest ? 'Sending...' : 'Send Friend Request'),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
